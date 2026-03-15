@@ -1,11 +1,13 @@
+import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, Search, Heart, MessageCircle, MoreHorizontal, Plus, Menu } from "lucide-react-native";
+import { Bell, Search, Heart, MessageCircle, MoreVertical, Plus, Menu, Globe2, BadgeCheck } from "lucide-react-native";
 import { Avatar } from "../../components/Avatar";
 import { Card } from "../../components/Card";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function HomeFeed() {
+
   const discoveryProfiles = [
     { id: 1, name: "Aria Laurent", role: "Portrait", image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&h=600&fit=crop" },
     { id: 2, name: "Kenji Mori", role: "Street", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=600&fit=crop" },
@@ -14,49 +16,47 @@ export default function HomeFeed() {
   ];
 
   return (
-    <View className="flex-1 bg-background">
-      {/* Deep Blue/Purple Top Gradient seamlessly fading into Background */}
+    <View className="flex-1 bg-white">
+      {/* Simple Top Blue fade as per reference image */}
       <LinearGradient
-        colors={["#5b8fbc", "#1A2b4c", "#060D1A"]}
-        locations={[0, 0.4, 1]}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 350, zIndex: 0 }}
+        colors={["#5b8fbc", "rgba(26,43,76,0.3)", "rgba(255,255,255,0)"]}
+        locations={[0, 0.6, 1]}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 160, zIndex: 0 }}
       />
       
       <SafeAreaView className="flex-1 relative">
         {/* Header */}
         <View className="px-5 py-4 flex-row justify-between items-center z-20">
-          <View className="flex-row items-center gap-3">
-            <Text className="text-2xl font-outfit text-white tracking-tight" style={{ marginLeft: 2 }}>Home</Text>
+          <View className="flex-row items-center gap-3 mt-2">
+            <Text className="text-3xl font-outfit-bold text-black tracking-tight" style={{ marginLeft: 2 }}>Home</Text>
           </View>
           <View className="flex-row gap-3">
-            <TouchableOpacity className="min-w-[70px] h-12 px-4 bg-white rounded-full flex-row items-center justify-center gap-2 shadow-sm">
-              <Bell size={20} color="#000" />
-              <Text className="font-outfit-medium text-black text-base mt-0.5">3</Text>
+            <TouchableOpacity className="w-14 h-14 bg-white rounded-full items-center justify-center shadow-sm border border-black/5">
+              <Bell size={22} color="#000" />
             </TouchableOpacity>
-            <TouchableOpacity className="w-12 h-12 bg-white rounded-full items-center justify-center shadow-sm">
-              <Search size={20} color="#000" />
+            <TouchableOpacity className="w-14 h-14 bg-white rounded-full items-center justify-center shadow-sm border border-black/5">
+              <Search size={22} color="#000" />
             </TouchableOpacity>
           </View>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
           {/* Profile Discovery */}
-          <View className="mt-8 mb-8">
+          <View className="mt-4 mb-4">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="pl-5">
-              {/* Profiles */}
+              {/* Profiles - Removing from white/gray card */}
               {discoveryProfiles.map(profile => (
-                <View key={profile.id} className="w-32 h-44 mr-3 rounded-[28px] overflow-hidden relative border border-white/10">
+                <View key={profile.id} className="w-24 h-32 mr-3 rounded-[24px] overflow-hidden relative shadow-sm border border-white/20">
                   <Image source={{ uri: profile.image }} className="w-full h-full absolute" resizeMode="cover" />
-                  <LinearGradient colors={["transparent", "rgba(6,13,26,0.95)"]} className="w-full h-[60%] absolute bottom-0" />
+                  <LinearGradient colors={["transparent", "rgba(0,0,0,0.7)"]} className="w-full h-[50%] absolute bottom-0" />
                   
                   {/* Floating Avatar */}
-                  <View className="absolute top-3 left-3 w-10 h-10 rounded-full border-[2.5px] border-[#7ECEFE] overflow-hidden">
+                  <View className="absolute top-2 left-2 w-8 h-8 rounded-full border-[1.5px] border-white overflow-hidden">
                      <Image source={{ uri: profile.image }} className="w-full h-full" resizeMode="cover" />
                   </View>
                   
-                  <View className="absolute bottom-4 left-3 right-3">
-                    <Text className="text-white font-outfit-medium text-sm" numberOfLines={1}>{profile.name}</Text>
-                    <Text className="text-secondary font-outfit-medium text-xs mt-0.5">{profile.role}</Text>
+                  <View className="absolute bottom-3 left-2 right-2">
+                    <Text className="text-white font-outfit-medium text-xs" numberOfLines={1}>{profile.name}</Text>
                   </View>
                 </View>
               ))}
@@ -65,33 +65,36 @@ export default function HomeFeed() {
           </View>
 
           {/* Feed Posts */}
-          <View className="px-6 gap-6">
+          <View>
             <FeedPost
-              name="Aria Laurent"
-              time="8 mins ago · Paris"
+              name="Jenny Wilson"
+              time="3 mins ago"
+              location="California"
               avatar="https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&h=200&fit=crop"
-              postImage="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=2670&auto=format&fit=crop"
-              description="Golden hour over the mountain lake. Shot with a 35mm prime — sometimes you just need one lens and patience. 🏔️✨"
-              likes="3.4k"
-              comments="218"
+              images={[
+                  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&fit=crop",
+                  "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&fit=crop",
+                  "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=800&fit=crop"
+              ]}
+              tag="Brother"
+              description="Simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s"
+              likes="2.1k"
+              comments="2.1k"
             />
             <FeedPost
               name="Kenji Mori"
-              time="1 hr ago · Tokyo"
+              time="1 hr ago"
+              location="Tokyo"
               avatar="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop"
-              postImage="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=2644&auto=format&fit=crop"
-              description="Neon reflections in the rain. The city after midnight has a soul of its own. Long exposure, handheld @ f/1.8 🌧️🌃"
+              images={[
+                  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&fit=crop",
+                  "https://images.unsplash.com/photo-1554080353-a576cf803bda?w=800&fit=crop",
+                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&fit=crop"
+              ]}
+              tag="Portrait"
+              description="Urban exploration in the heart of the city. The lights at night are truly something else entirely."
               likes="1.9k"
               comments="87"
-            />
-            <FeedPost
-              name="Sofia Reyes"
-              time="3 hrs ago · Mexico City"
-              avatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
-              postImage="https://images.unsplash.com/photo-1508193638397-1c4234db14d8?q=80&w=2574&auto=format&fit=crop"
-              description="Macro world — there's an entire universe hiding in the flowers of my balcony garden. 🌸🔍"
-              likes="2.7k"
-              comments="153"
             />
           </View>
         </ScrollView>
@@ -100,50 +103,78 @@ export default function HomeFeed() {
   );
 }
 
-function FeedPost({ name, time, avatar, postImage, description, likes, comments }: any) {
+function FeedPost({ name, time, location, avatar, images, description, tag }: any) {
+  const [focusedImage, setFocusedImage] = React.useState<number>(2); // Center image focused by default
+
   return (
-    <Card className="p-5">
-      {/* Post Header */}
-      <View className="flex-row items-center justify-between mb-4">
+    <View className="bg-white px-5 py-6 mb-2">
+      {/* Post Header - Removed the gray background (bg-[#f0f2f5]) and border from the tag to match screenshot */}
+      <View className="flex-row items-center justify-between mb-6">
         <View className="flex-row items-center">
-          <Avatar source={{ uri: avatar }} size={48} />
+          <Avatar source={{ uri: avatar }} size={52} />
           <View className="ml-3">
-            <Text className="font-outfit-bold text-white text-base">{name}</Text>
-            <Text className="font-outfit text-text-secondary text-xs">{time}</Text>
+            <View className="flex-row items-center">
+              <Text className="font-outfit-bold text-black text-lg">{name}</Text>
+              <BadgeCheck size={16} fill="#0EA5E9" color="#FFF" className="ml-1" />
+            </View>
+            <View className="flex-row items-center mt-0.5">
+              <Text className="font-outfit text-[#6B7280] text-sm">{time} . {location} . </Text>
+              <Globe2 size={12} color="#6B7280" />
+            </View>
           </View>
         </View>
-        <TouchableOpacity className="px-4 py-2 bg-secondary/20 rounded-full border border-secondary/30">
-          <Text className="font-outfit-medium text-secondary text-xs">Follow</Text>
+        <TouchableOpacity className="px-5 py-2.5 rounded-full border border-black/5">
+          <Text className="font-outfit-medium text-black text-sm">{tag}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Post Image */}
-      <View className="w-full h-[300px] rounded-[28px] overflow-hidden mb-5">
-        <Image source={{ uri: postImage }} className="w-full h-full" resizeMode="cover" />
+      {/* 3 Stacked Tilted Images Layout with Touch to Focus and Padding */}
+      <View className="w-full h-[320px] items-center justify-center relative mb-6 px-4">
+        {/* Left Back Image */}
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          onPress={() => setFocusedImage(0)}
+          className={`absolute left-4 w-[55%] h-[240px] rounded-[32px] overflow-hidden ${focusedImage === 0 ? 'border-4 border-white shadow-xl' : ''}`}
+          style={{ 
+            transform: [{ rotate: focusedImage === 0 ? '0deg' : '-8deg' }, { translateX: focusedImage === 0 ? 30 : -10 }, { scale: focusedImage === 0 ? 1.1 : 1 }],
+            zIndex: focusedImage === 0 ? 30 : 10 
+          }}
+        >
+          {images && images.length > 0 && <Image source={{ uri: images[0] }} className="w-full h-full" resizeMode="cover" />}
+        </TouchableOpacity>
+        
+        {/* Right Back Image */}
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          onPress={() => setFocusedImage(1)}
+          className={`absolute right-4 w-[55%] h-[240px] rounded-[32px] overflow-hidden ${focusedImage === 1 ? 'border-4 border-white shadow-xl' : ''}`}
+          style={{ 
+            transform: [{ rotate: focusedImage === 1 ? '0deg' : '8deg' }, { translateX: focusedImage === 1 ? -30 : 10 }, { scale: focusedImage === 1 ? 1.1 : 1 }],
+            zIndex: focusedImage === 1 ? 30 : 10 
+          }}
+        >
+          {images && images.length > 1 && <Image source={{ uri: images[1] }} className="w-full h-full" resizeMode="cover" />}
+        </TouchableOpacity>
+        
+        {/* Main Center Image */}
+        <TouchableOpacity 
+          activeOpacity={0.9}
+          onPress={() => setFocusedImage(2)}
+          className={`absolute w-[58%] h-[280px] rounded-[36px] overflow-hidden ${focusedImage === 2 ? 'border-4 border-white shadow-xl' : ''}`}
+          style={{ 
+            zIndex: focusedImage === 2 ? 30 : 20,
+            transform: [{ scale: focusedImage === 2 ? 1 : 0.95 }]
+          }}
+        >
+          {images && images.length > 2 && <Image source={{ uri: images[2] }} className="w-full h-full" resizeMode="cover" />}
+        </TouchableOpacity>
       </View>
 
-      {/* Description */}
-      <Text className="font-outfit text-base leading-relaxed text-text-secondary mb-5 pl-1">
+      {/* Description - Removing Likes and Comments as requested */}
+      <Text className="font-outfit text-base leading-relaxed text-black">
         {description}
       </Text>
-
-      {/* Footer Actions */}
-      <View className="flex-row justify-between items-center px-1">
-        <View className="flex-row gap-3">
-          <TouchableOpacity className="flex-row items-center px-5 py-3 border border-card-border bg-white/5 rounded-full">
-            <Heart size={17} color="#D4AF37" />
-            <Text className="ml-2.5 font-outfit-medium text-white text-sm">{likes}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="flex-row items-center px-5 py-3 border border-card-border bg-white/5 rounded-full">
-            <MessageCircle size={17} color="#FFFFFF" />
-            <Text className="ml-2.5 font-outfit-medium text-white text-sm">{comments}</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity className="w-12 h-12 bg-white/5 border border-card-border rounded-full items-center justify-center">
-          <MoreHorizontal size={20} color="#94A3B8" />
-        </TouchableOpacity>
-      </View>
-    </Card>
+    </View>
   );
 }
 

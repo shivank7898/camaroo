@@ -5,10 +5,11 @@ import { Input } from "../../components/Input";
 import { SocialButton } from "../../components/SocialButton";
 import { LinearGradient } from "expo-linear-gradient";
 import { ArrowLeft } from "lucide-react-native";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export default function Signup() {
+export default function SignupScreen() {
   const router = useRouter();
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
 
   // Animations
   const slideAnimRight1 = useRef(new Animated.Value(50)).current; 
@@ -52,12 +53,13 @@ export default function Signup() {
         <TouchableOpacity
           className="mt-4 ml-6 self-start p-3 rounded-full bg-white/10 border border-white/20"
           onPress={() => router.back()}
+          style={{ zIndex: 20 }}
         >
           <ArrowLeft size={22} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* Form content */}
-        <View className="flex-1 justify-center px-6 pb-10">
+        <View className="flex-1 px-6 pt-12 pb-10">
           <View className="p-8 rounded-2xl border border-white/20 bg-white/5 shadow-2xl relative overflow-hidden">
              
             {/* Animated One-Time Sheen Glare */}
@@ -92,10 +94,36 @@ export default function Signup() {
               </Text>
             </View>
 
+            {/* Auth Method Tabs */}
+            <View className="flex-row bg-white/10 rounded-2xl p-1 mb-8">
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={() => setAuthMethod("email")}
+                className={`flex-1 py-3 items-center rounded-xl ${authMethod === "email" ? "bg-white/20" : ""}`}
+              >
+                <Text className={`font-outfit-medium text-sm ${authMethod === "email" ? "text-white" : "text-text-secondary"}`}>Email</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={() => setAuthMethod("phone")}
+                className={`flex-1 py-3 items-center rounded-xl ${authMethod === "phone" ? "bg-white/20" : ""}`}
+              >
+                <Text className={`font-outfit-medium text-sm ${authMethod === "phone" ? "text-white" : "text-text-secondary"}`}>Phone</Text>
+              </TouchableOpacity>
+            </View>
+
             <Animated.View style={{ transform: [{ translateX: slideAnimLeft1 }], opacity: fadeAnim }} className="gap-4 mb-6">
-              <Input label="Email Address" placeholder="hello@example.com" keyboardType="email-address" autoCapitalize="none" />
-              <Input label="Mobile Number" placeholder="+1 (555) 000-0000" keyboardType="phone-pad" />
-              <Input label="Password" placeholder="••••••••" secureTextEntry />
+              {authMethod === "email" ? (
+                <>
+                  <Input label="Email Address" placeholder="hello@example.com" keyboardType="email-address" autoCapitalize="none" />
+                  <Input label="Password" placeholder="••••••••" secureTextEntry />
+                </>
+              ) : (
+                <>
+                  <Input label="Mobile Number" placeholder="+1 (555) 000-0000" keyboardType="phone-pad" />
+                  <Input label="OTP" placeholder="Enter 6-digit code" keyboardType="number-pad" />
+                </>
+              )}
             </Animated.View>
 
             <Animated.View style={{ transform: [{ translateY: btnSlideAnim }], opacity: btnFadeAnim }}>

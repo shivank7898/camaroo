@@ -38,3 +38,20 @@ The Home screen serves as the core content discovery engine.
 - **Top Fade**: A deep purple-to-dark-blue (`#5b8fbc` -> `#060D1A`) gradient overlay starts at the top of the header area, smoothly graduating into the main body background, masking scrollable content seamlessly.
 - **Featured Creators**: A horizontally scrolling list of prominent users rendered as tall vertical cards (`w-32 h-44`) with embedded background photography, overlapping avatars, and gradient fades to ensure text legibility.
 - **Feed Posts**: Edge-to-edge images within rounded cards (`rounded-[28px]`), prominent avatars, and modern unified action bars (Like/Comment bubbles) inside the primary dark content container wrapper.
+
+### Authentication & Onboarding
+The entry flow for Camaroo is designed to be highly visual, leveraging full-bleed photography and structured steps.
+- **Welcome Screen**: Features full-bleed background photography layered with a bottom-heavy gradient fade (`transparent` -> `rgba` -> `#060D1A`). Uses a gradient primary CTA button (`#6A11CB` -> `#2575FC`).
+- **Authentication (Login/Signup)**: Clean, forms-based screens utilizing custom `Input` components with floating labels/icons and reusable `SocialButton` components for third-party auth. Includes deep blur layers and gradient masks.
+- **Onboarding Flow**: A multi-step structured flow to capture user preferences:
+  - **Role Selection (`role.tsx`)**: Users identify as Photographers, Enthusiasts, etc., using large selectable cards.
+  - **Details (`details.tsx`)**: Captures basic profile information.
+  - **Optional Preferences (`optional.tsx`)**: Allows selection of photography styles/genres using custom `SelectPill` components.
+
+### Shared UI Components
+A library of modular components (`components/`) enforces design consistency:
+- **`Avatar`**: Reusable profile picture circles with varying sizes.
+- **`Button` & `SocialButton`**: Standardized tap targets with primary, secondary, and gradient support.
+- **`Card`**: Surface containers for content display.
+- **`Input`**: Text entry fields with integrated icons and consistent deep-theme bordering.
+- **`SelectPill`**: Interactive toggle pills for multi-selection within onboarding and discovery.
