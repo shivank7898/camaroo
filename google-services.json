@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "695317287608",
+    "project_id": "dev-camroopro",
+    "storage_bucket": "dev-camroopro.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:695317287608:android:f726f2a12f5015aa009a4d",
+        "android_client_info": {
+          "package_name": "com.pankajcamaroo.camaroo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "695317287608-atqsdnojdqv8gmj8hhovtdcjjdbiomc7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfeN-qv9C5ea2bnAQC79FPfFkv1RYRD0I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "695317287608-atqsdnojdqv8gmj8hhovtdcjjdbiomc7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,58 +1,76 @@
 import { Tabs } from "expo-router";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Home, Compass, Plus, MessageCircle, User } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { useAuthStore } from "@store/authStore";
+import { ProtectedRoute } from "@components/auth/ProtectedRoute";
 
 function CustomTabBar({ state, navigation }: any) {
   const activeRoute = state.routes[state.index].name;
+  const insets = useSafeAreaInsets();
 
   const navigateTo = (name: string) => {
     navigation.navigate(name);
   };
 
   return (
-    <View className="absolute bottom-10 left-6 right-6 flex-row justify-between items-center" style={{ elevation: 0 }}>
-      {/* 1. Left: Messages */}
+    <View
+      style={{
+        backgroundColor: "rgba(6, 13, 26, 0.80)",
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+        paddingTop: 12,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        elevation: 0,
+      }}
+    >
+      {/* Glass rim — subtle gradient strip along the top */}
+      <LinearGradient
+        colors={["rgba(91,143,188,0.35)", "rgba(91,143,188,0)"]}
+        style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1.5 }}
+      />
       <TouchableOpacity 
-        activeOpacity={0.8}
-        onPress={() => navigateTo('messages')}
-        className={`h-14 items-center justify-center rounded-[28px] ${activeRoute === 'messages' ? 'bg-[#1E293B] px-5 flex-row gap-2' : 'bg-[#0F1E30] w-14'}`}
+        activeOpacity={0.6} onPress={() => navigateTo('index')}
+        className="items-center justify-center w-14"
       >
-        <MessageCircle size={22} color="#FFFFFF" strokeWidth={activeRoute === 'messages' ? 2.5 : 2} />
-        {activeRoute === 'messages' && <Text className="text-white font-outfit-medium text-sm">Chat</Text>}
+        <Home size={24} color={activeRoute === 'index' ? "#FFFFFF" : "#64748B"} strokeWidth={activeRoute === 'index' ? 2.5 : 2} />
+        <Text className={`text-[10px] mt-1 font-outfit-medium ${activeRoute === 'index' ? 'text-white' : 'text-slate-500'}`}>Home</Text>
       </TouchableOpacity>
 
-      {/* Center Group: Home and Create */}
-      <View className="flex-row items-center gap-3">
-        {/* 2. Middle-Left: Home */}
-        <TouchableOpacity 
-          activeOpacity={0.8}
-          onPress={() => navigateTo('index')}
-          className={`h-14 items-center justify-center rounded-[28px] ${activeRoute === 'index' ? 'bg-[#1E293B] px-5 flex-row gap-2' : 'bg-[#0F1E30] w-14'}`}
-        >
-          <Home size={22} color="#FFFFFF" fill={activeRoute === 'index' ? "#FFFFFF" : "transparent"} strokeWidth={activeRoute === 'index' ? 2 : 2} />
-          {activeRoute === 'index' && <Text className="text-white font-outfit-medium text-sm">Home</Text>}
-        </TouchableOpacity>
-
-        {/* 3. Middle-Right: Create */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => navigateTo('create')}
-          className={`h-14 items-center justify-center rounded-[28px] ${activeRoute === 'create' ? 'bg-[#0EA5E9] px-5 flex-row gap-2' : 'bg-[#0EA5E9] w-14 shadow-lg shadow-sky-500/30'}`}
-        >
-          <Plus size={28} color="#FFFFFF" />
-          {activeRoute === 'create' && <Text className="text-white font-outfit-medium text-sm">New</Text>}
-        </TouchableOpacity>
-      </View>
-
-      {/* 4. Right: Profile */}
       <TouchableOpacity 
-        activeOpacity={0.8}
-        onPress={() => navigateTo('profile')}
-        className={`h-14 items-center justify-center rounded-[28px] ${activeRoute === 'profile' ? 'bg-[#1E293B] px-5 flex-row gap-2' : 'bg-[#0F1E30] w-14'}`}
+        activeOpacity={0.6} onPress={() => navigateTo('explore')}
+        className="items-center justify-center w-14"
       >
-        <User size={22} color="#FFFFFF" strokeWidth={activeRoute === 'profile' ? 2.5 : 2} />
-        {activeRoute === 'profile' && <Text className="text-white font-outfit-medium text-sm">Profile</Text>}
+        <Compass size={24} color={activeRoute === 'explore' ? "#FFFFFF" : "#64748B"} strokeWidth={activeRoute === 'explore' ? 2.5 : 2} />
+        <Text className={`text-[10px] mt-1 font-outfit-medium ${activeRoute === 'explore' ? 'text-white' : 'text-slate-500'}`}>Explore</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={() => navigateTo('create')}
+        className="w-12 h-12 mb-2 rounded-full bg-[#0EA5E9] items-center justify-center"
+      >
+        <Plus size={24} color="#FFFFFF" />
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        activeOpacity={0.6} onPress={() => navigateTo('messages')}
+        className="items-center justify-center w-14"
+      >
+        <MessageCircle size={24} color={activeRoute === 'messages' ? "#FFFFFF" : "#64748B"} strokeWidth={activeRoute === 'messages' ? 2.5 : 2} />
+        <Text className={`text-[10px] mt-1 font-outfit-medium ${activeRoute === 'messages' ? 'text-white' : 'text-slate-500'}`}>Chat</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        activeOpacity={0.6} onPress={() => navigateTo('profile')}
+        className="items-center justify-center w-14"
+      >
+        <User size={24} color={activeRoute === 'profile' ? "#FFFFFF" : "#64748B"} strokeWidth={activeRoute === 'profile' ? 2.5 : 2} />
+        <Text className={`text-[10px] mt-1 font-outfit-medium ${activeRoute === 'profile' ? 'text-white' : 'text-slate-500'}`}>Profile</Text>
       </TouchableOpacity>
     </View>
   );
@@ -60,16 +78,18 @@ function CustomTabBar({ state, navigation }: any) {
 
 export default function TabLayout() {
   return (
-    <Tabs
-      tabBar={(props) => <CustomTabBar {...props} />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Tabs.Screen name="index" />
-      <Tabs.Screen name="explore" />
-      <Tabs.Screen name="create" />
-      <Tabs.Screen name="messages" />
-      <Tabs.Screen name="profile" />
-    </Tabs>
+    <ProtectedRoute>
+      <Tabs
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="explore" />
+        <Tabs.Screen name="create" />
+        <Tabs.Screen name="messages" />
+        <Tabs.Screen name="profile" />
+        <Tabs.Screen name="user/[id]" options={{ href: null }} />
+      </Tabs>
+    </ProtectedRoute>
   );
 }
-

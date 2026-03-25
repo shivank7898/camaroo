@@ -1,11 +1,22 @@
 import { View, Text, Image } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, Redirect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native";
+import { useAuthStore } from "@store/authStore";
 
 export default function Welcome() {
   const router = useRouter();
+  const token = useAuthStore((s) => s.token);
+  const isProfileCompleted = useAuthStore((s) => s.user?.isProfileCompleted);
+
+  if (token) {
+    if (isProfileCompleted) {
+      return <Redirect href="/(tabs)" />;
+    } else {
+      return <Redirect href="/onboarding/role" />;
+    }
+  }
 
   return (
     <View className="flex-1 bg-background">
@@ -51,7 +62,7 @@ export default function Welcome() {
         {/* CTA Button — purple gradient */}
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => router.push("/(auth)/login")}
+          onPress={() => router.push("/(auth)/signup")}
         >
           <LinearGradient
             colors={["#6A11CB", "#2575FC"]}
