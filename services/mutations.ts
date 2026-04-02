@@ -1,5 +1,6 @@
 import { apiRequest } from "./api";
 import type { ApiResponse, AuthData, ProfileUpdatePayload, ForgotPasswordForm, ResetPasswordForm, ChangePasswordForm, UpdateAvailabilityPayload } from "@/types/auth";
+import type { UpdatePortfolioPayload, UpdatePortfolioStatusPayload } from "@/types/portfolio";
 
 // Re-export types for convenience
 export type { ApiResponse, AuthData };
@@ -115,13 +116,66 @@ export const createPortfolioPostMutation = async (payload: {
   title: string;
   description: string;
   mediaUrls: { name: string; url: string; mediaType: string };
+  coverUrls: { name: string; url: string; mediaType: string };
   tags: string[];
   visibility: "public" | "private";
 }) => {
   const response = await apiRequest<ApiResponse<any>>({
-    url: "/api/v1/portfolio",
+    url: "/portfolio",
     method: "POST",
     payload,
+  });
+  return response?.data;
+};
+
+export const updatePortfolioMutation = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: UpdatePortfolioPayload;
+}) => {
+  const response = await apiRequest<ApiResponse<any>>({
+    url: `/portfolio/${id}`,
+    method: "PATCH",
+    payload,
+  });
+  return response?.data;
+};
+
+export const updatePortfolioStatusMutation = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: UpdatePortfolioStatusPayload;
+}) => {
+  const response = await apiRequest<ApiResponse<any>>({
+    url: `/portfolio/${id}/status`,
+    method: "PATCH",
+    payload,
+  });
+  return response?.data;
+};
+
+// ==========================================
+// PORTFOLIO ENGAGEMENT MUTATIONS
+// ==========================================
+
+export const likePortfolioPostMutation = async (params: { portfolioId: string }) => {
+  const response = await apiRequest<ApiResponse<any>>({
+    url: `/portfolio-engagement/likes`,
+    method: "POST",
+    payload: params,
+  });
+  return response?.data;
+};
+
+export const unlikePortfolioPostMutation = async (params: { portfolioId: string }) => {
+  const response = await apiRequest<ApiResponse<any>>({
+    url: `/portfolio-engagement/likes/portfolio/${params.portfolioId}`,
+    method: "DELETE",
+    payload: params,
   });
   return response?.data;
 };

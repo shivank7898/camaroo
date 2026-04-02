@@ -1,5 +1,6 @@
 import { apiRequest } from "./api";
 import type { ApiResponse } from "@/types/auth";
+import type { PaginatedPortfolioResponse } from "@/types/portfolio";
 
 export interface GetCalendarParams {
   userId: string;
@@ -15,6 +16,22 @@ export const fetchMe = async () => {
   const response = await apiRequest<ApiResponse<unknown>>({
     url: "/me",
     method: "GET",
+  });
+  return response?.data;
+};
+
+export const getUserPortfolioQuery = async () => {
+  const response = await apiRequest<PaginatedPortfolioResponse>({
+    url: "/portfolio/get-user-portfolio?isOwner=true",
+    method: "GET"
+  });
+  return response || null;
+};
+
+export const getPortfolioByIdQuery = async (id: string) => {
+  const response = await apiRequest<{ data: any }>({
+    url: `/portfolio/get-portfolio/${id}`,
+    method: "GET"
   });
   return response?.data;
 };

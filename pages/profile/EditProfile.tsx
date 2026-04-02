@@ -22,6 +22,7 @@ import { useLocationPicker } from "@hooks/useLocationPicker";
 import { editProfileSchema, EditProfileForm } from "@/validations/profileValidation";
 import { CREATOR_ROLES } from "@constants";
 import type { SocialMediaLinks, ProfileUpdatePayload, ApiError, UserProfile } from "@/types/auth";
+import { useLogout } from "@hooks/useLogout";
 
 const SPEC_OPTIONS = ["Wedding", "Fashion", "Commercial", "Portrait", "Events", "Product"];
 
@@ -31,7 +32,7 @@ export default function EditProfile() {
   const [isAddingCustomSpec, setIsAddingCustomSpec] = useState(false);
   const [customSpec, setCustomSpec] = useState("");
 
-  const logout = useAuthStore(s => s.logout);
+  const { handleLogout } = useLogout();
   const authUser = useAuthStore(s => s.user);
   const userData = useUserStore(s => s.userData);
   const setUserData = useUserStore(s => s.setUserData);
@@ -270,7 +271,7 @@ export default function EditProfile() {
             </CollapsibleSection>
 
             <View className="mt-8 mb-4 border-t border-slate-200/60 pt-8" />
-            <TouchableOpacity activeOpacity={0.8} onPress={() => Alert.alert("Logout", "Are you sure you want to log out?", [{ text: "Cancel", style: "cancel" }, { text: "Logout", style: "destructive", onPress: () => { logout(); router.replace("/(auth)/login"); } }])} className="flex-row items-center justify-center py-4 rounded-xl bg-red-50 border border-red-100 mb-10">
+            <TouchableOpacity activeOpacity={0.8} onPress={() => Alert.alert("Logout", "Are you sure you want to log out?", [{ text: "Cancel", style: "cancel" }, { text: "Logout", style: "destructive", onPress: handleLogout }])} className="flex-row items-center justify-center py-4 rounded-xl bg-red-50 border border-red-100 mb-10">
               <LogOut size={18} color="#EF4444" className="mr-2" />
               <Text className="font-outfit-bold text-red-500 text-base mt-0.5">Log Out</Text>
             </TouchableOpacity>

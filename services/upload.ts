@@ -71,10 +71,8 @@ export const startPortfolioUpload = async (
       body: 'Your post is being uploaded...',
       onProgressTitle: 'Uploading Post',
       onProgressBody: 'Progress: [[progress]]%',
-      onCompleteTitle: 'Upload Complete',
-      onCompleteBody: 'Finalizing post...',
-      onErrorTitle: 'Upload Failed',
-      onErrorBody: 'Could not upload media.',
+      // Completion/error handled by usePortfolioListener via expo-notifications
+      autoClear: true,
     },
   };
 

@@ -16,6 +16,7 @@ export interface PortfolioUpload {
   status: 'uploading' | 'uploaded' | 'saving' | 'failed';
   error?: string;
   uploadUrl: string;       // pre-signed URL to upload to
+  coverUrl?: string;       // URL for the manually selected video thumbnail
 }
 
 interface UploadStore {

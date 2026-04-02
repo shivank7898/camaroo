@@ -1,32 +1,68 @@
 import { useEffect, useRef } from 'react';
 import BackgroundUpload from 'react-native-background-upload';
 import * as Notifications from 'expo-notifications';
-import Toast from 'react-native-toast-message';
 import { useUploadStore } from '@store/uploadStore';
 import { createPortfolioPostMutation } from '@services/mutations';
+import type { QueryClient } from '@tanstack/react-query';
+import type { NotificationContentInput } from 'expo-notifications';
 
+// Suppress foreground alert — we rely solely on the scheduled notification
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldShowBanner: true,
+    shouldShowAlert: false,
+    shouldShowBanner: false,
     shouldShowList: true,
-    shouldPlaySound: true,
+    shouldPlaySound: false,
     shouldSetBadge: false,
   }),
 });
 
-export function usePortfolioListener() {
-  const activeUploads = useUploadStore(s => s.activeUploads);
+const sendNotification = async (title: string, body: string) => {
+  const content: NotificationContentInput = {
+    title,
+    body,
+    sound: 'default',
+    data: { screen: 'profile' },
+  };
+
+  await Notifications.scheduleNotificationAsync({
+    content,
+    trigger: null,
+  });
+};
+
+export function usePortfolioListener(queryClient: QueryClient) {
+  const activeUploads = useUploadStore((state) => state.activeUploads);
   const updateProgress = useUploadStore(s => s.updateProgress);
   const updateStatus = useUploadStore(s => s.updateStatus);
   const removeUpload = useUploadStore(s => s.removeUpload);
 
+  // Keep track of which ids have active native listeners
   const listenersAttached = useRef<Set<string>>(new Set());
+  const notifiedUploads = useRef<Set<string>>(new Set());
+
+  // Request notification permissions + create Android channel on mount
+  useEffect(() => {
+    const setup = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        await Notifications.requestPermissionsAsync();
+      }
+
+      await Notifications.setNotificationChannelAsync('upload-status', {
+        name: 'Upload Status',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+      });
+    };
+    setup();
+  }, []);
 
   useEffect(() => {
     Object.keys(activeUploads).forEach(uploadId => {
       if (listenersAttached.current.has(uploadId)) return;
-      
+
       const upload = activeUploads[uploadId];
       if (upload.status === 'uploaded' || upload.status === 'saving') return;
 
@@ -39,7 +75,7 @@ export function usePortfolioListener() {
       BackgroundUpload.addListener('error', uploadId, (data) => {
         const errorMsg = typeof data.error === 'string' ? data.error : 'Upload failed';
         updateStatus(uploadId, 'failed', errorMsg);
-        Toast.show({ type: 'error', text1: 'Upload failed', text2: upload.title });
+        sendNotification('Upload Failed ❌', `"${upload.title}" failed to upload.`);
         listenersAttached.current.delete(uploadId);
       });
 
@@ -49,41 +85,49 @@ export function usePortfolioListener() {
       });
 
       BackgroundUpload.addListener('completed', uploadId, async () => {
+        if (notifiedUploads.current.has(uploadId)) return;
+        notifiedUploads.current.add(uploadId);
+
         updateStatus(uploadId, 'uploaded');
-        
+
         try {
           updateStatus(uploadId, 'saving');
           await createPortfolioPostMutation({
             title: upload.title,
             description: upload.description,
             mediaUrls: {
-              name: "portfolio-media",
+              name: 'portfolio-media',
               url: upload.fileUrl,
-              mediaType: upload.mediaType
+              mediaType: upload.mediaType,
             },
+            coverUrls: upload.mediaType === 'video' && upload.coverUrl
+              ? { name: 'cover-image', url: upload.coverUrl, mediaType: 'photo' }
+              : { name: 'cover-image', url: upload.fileUrl, mediaType: upload.mediaType },
             tags: upload.tags,
-            visibility: upload.visibility
+            visibility: upload.visibility,
           });
 
           removeUpload(uploadId);
           listenersAttached.current.delete(uploadId);
-          
-          Toast.show({ type: 'success', text1: 'Upload Successful', text2: 'Your portfolio post is live!' });
-          
-          await Notifications.scheduleNotificationAsync({
-            content: { title: "Upload Successful", body: "Your portfolio post is now live!" },
-            trigger: null,
-          });
+          queryClient.invalidateQueries({ queryKey: ["my-portfolio"] });
 
-        } catch (error: any) {
-          updateStatus(uploadId, 'failed', error.message || 'Failed to save post');
-          Toast.show({ type: 'error', text1: 'Post saving failed', text2: 'Tap retry in your profile.' });
+          await sendNotification(
+            'Upload Successful ✅',
+            `"${upload.title}" is now live!`,
+          );
+        } catch (error: unknown) {
+          const msg = error instanceof Error ? error.message : 'Failed to save post';
+          updateStatus(uploadId, 'failed', msg);
+
+          await sendNotification(
+            'Upload Failed ❌',
+            `"${upload.title}" could not be saved. Tap to retry.`,
+          );
         }
       });
     });
   }, [activeUploads]);
 
-  // Expose manual retry for UI
   const retryFailedAPI = async (uploadId: string) => {
     const upload = activeUploads[uploadId];
     if (!upload || upload.status !== 'failed' || !upload.fileUrl) return;
@@ -94,19 +138,24 @@ export function usePortfolioListener() {
         title: upload.title,
         description: upload.description,
         mediaUrls: {
-          name: "portfolio-media",
+          name: 'portfolio-media',
           url: upload.fileUrl,
-          mediaType: upload.mediaType
+          mediaType: upload.mediaType,
         },
+        coverUrls: upload.mediaType === 'video' && upload.coverUrl
+          ? { name: 'cover-image', url: upload.coverUrl, mediaType: 'photo' }
+          : { name: 'cover-image', url: upload.fileUrl, mediaType: upload.mediaType },
         tags: upload.tags,
-        visibility: upload.visibility
+        visibility: upload.visibility,
       });
 
       removeUpload(uploadId);
-      Toast.show({ type: 'success', text1: 'Upload Successful', text2: 'Your portfolio post is live!' });
-    } catch (error: any) {
-      updateStatus(uploadId, 'failed', error.message || 'Retry failed');
-      Toast.show({ type: 'error', text1: 'Retry failed', text2: 'Please try again later' });
+      queryClient.invalidateQueries({ queryKey: ["my-portfolio"] });
+      await sendNotification('Upload Successful ✅', `"${upload.title}" is now live!`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Retry failed';
+      updateStatus(uploadId, 'failed', msg);
+      await sendNotification('Retry Failed ❌', 'Please try again later.');
     }
   };
 

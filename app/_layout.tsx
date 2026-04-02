@@ -6,7 +6,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Toast from 'react-native-toast-message';
+import * as Notifications from 'expo-notifications';
 import { usePortfolioListener } from "@hooks/usePortfolioListener";
+import { useRouter } from "expo-router";
 
 const queryClient = new QueryClient();
 
@@ -26,7 +28,19 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
-  usePortfolioListener();
+  usePortfolioListener(queryClient);
+
+  // Navigate to profile when user taps an upload notification
+  const router = useRouter();
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const screen = response.notification.request.content.data?.screen;
+      if (screen === 'profile') {
+        router.push('/(tabs)/profile');
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   if (!loaded && !error) {
     return null;

@@ -16,11 +16,21 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.pankajcamaroo.camaroo",
       "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:camroo-launchpad-881298ae.vercel.app"
+      ],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
-        }
+        },
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.695317287608-e8515p0lnqlr3utd8uebgsub4t9r72ki"
+            ]
+          }
+        ]
       },
       "googleServicesFile": "./GoogleService-Info.plist"
     },
@@ -34,6 +44,23 @@
       "predictiveBackGestureEnabled": false,
       "usesCleartextTraffic": true,
       "package": "com.pankajcamaroo.camaroo",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "camroo-launchpad-881298ae.vercel.app",
+              "pathPrefix": "/portfolio"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "googleServicesFile": "./google-services.json"
     },
     "web": {
@@ -47,7 +74,25 @@
       "expo-apple-authentication",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "./plugins/withCleartext"
+      "./plugins/withCleartext",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Camaroo to access your photos to upload media to your portfolio.",
+          "cameraPermission": "Allow Camaroo to access your camera to take photos and videos for your portfolio.",
+          "microphonePermission": "Allow Camaroo to access your microphone to record videos."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ],
+      "expo-notifications"
     ],
     "extra": {
       "router": {},
