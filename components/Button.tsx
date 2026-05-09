@@ -20,7 +20,7 @@ interface ButtonProps extends TouchableOpacityProps {
  */
 function Button({ title, variant = "primary", className = "", loading, ...props }: ButtonProps) {
   const variantStyles: Record<string, { bg: string; text: string }> = {
-    primary:   { bg: "bg-[#1E293B]",                         text: "text-white" },
+    primary:   { bg: "bg-[#0EA5E9]",                         text: "text-white" },
     secondary: { bg: "bg-slate-100",                          text: "text-[#1E293B]" },
     outline:   { bg: "bg-transparent border border-slate-300", text: "text-[#1E293B]" },
     danger:    { bg: "bg-red-50 border border-red-200",        text: "text-red-600" },
@@ -32,6 +32,7 @@ function Button({ title, variant = "primary", className = "", loading, ...props 
     <TouchableOpacity
       className={`px-8 py-4 rounded-full items-center justify-center ${bg} ${className}`}
       disabled={props.disabled || loading}
+      style={[{ opacity: (props.disabled || loading) ? 0.5 : 1 }, props.style as any]}
       {...props}
     >
       {loading ? (

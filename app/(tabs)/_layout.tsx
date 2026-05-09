@@ -1,11 +1,11 @@
 import { Tabs } from "expo-router";
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Platform, DeviceEventEmitter } from "react-native";
 import { Home, Compass, Plus, MessageCircle, User, Briefcase } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuthStore } from "@store/authStore";
 import { ProtectedRoute } from "@components/auth/ProtectedRoute";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
 import { Dimensions, StyleSheet } from "react-native";
@@ -74,7 +74,14 @@ function CustomTabBar({ state, navigation }: any) {
         {/* Left Half: Feed */}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: BOTTOM_PAD / 2 }}>
           <TouchableOpacity 
-            activeOpacity={0.6} onPress={() => navigateTo('index')}
+            activeOpacity={0.6}
+            onPress={() => {
+              if (activeRoute === 'index') {
+                DeviceEventEmitter.emit('scrollToTopFeed');
+              } else {
+                navigateTo('index');
+              }
+            }}
             style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 6 }}
           >
             <Compass size={22} color={activeRoute === 'index' ? "#FFFFFF" : "#64748B"} strokeWidth={activeRoute === 'index' ? 2.5 : 1.8} />
@@ -132,6 +139,7 @@ function CustomTabBar({ state, navigation }: any) {
 
 export default function TabLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
 
   return (
@@ -153,29 +161,31 @@ export default function TabLayout() {
       </Tabs>
 
       {/* Global Floating Chat Button */}
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => router.push('/(tabs)/messages' as any)}
-        style={{
-          position: 'absolute',
-          bottom: (insets.bottom || 0) + 95, // Dynamic gap above tab bar
-          right: 18,
-          width: 52,
-          height: 52,
-          borderRadius: 26,
-          backgroundColor: '#0EA5E9',
-          alignItems: 'center',
-          justifyContent: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 20,
-          zIndex: 2000,
-        }}
-      >
-        <MessageCircle size={24} color="#FFFFFF" />
-      </TouchableOpacity>
+      {pathname !== '/messages' && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => router.push('/(tabs)/messages' as any)}
+          style={{
+            position: 'absolute',
+            bottom: (insets.bottom || 0) + 95, // Dynamic gap above tab bar
+            right: 18,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: '#0EA5E9',
+            alignItems: 'center',
+            justifyContent: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.25,
+            shadowRadius: 12,
+            elevation: 20,
+            zIndex: 2000,
+          }}
+        >
+          <MessageCircle size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
     </ProtectedRoute>
   );
 }

@@ -236,6 +236,7 @@ type GlobalStore = {
 | ✅ **Always enforce Left-Aligned Design** | The app's visual structure relies on left-aligning headers, text, icons, and blocks. |
 | ❌ Do not center headers or icons | E.g., Use `items-start` instead of `items-center` for block groups |
 | ❌ No floating circle backgrounds | Icons should be plain, visually resting on the page without unnecessary rounded wrappers padding them out. |
+| ✅ Action Button Layout | Opportunity forms: Always bottom. Portfolio/Posts: Header top-right. |
 
 ---
 

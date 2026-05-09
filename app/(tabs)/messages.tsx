@@ -1,2 +1,4 @@
-import { View, Text } from "react-native";
-export default function Messages() { return <View className="flex-1 bg-background" />; }
+import ConversationList from "@/pages/chat/ConversationList";
+export default function MessagesTab() {
+  return <ConversationList />;
+}

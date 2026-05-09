@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { View, Text, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, Globe, Lock, Briefcase } from "lucide-react-native";
@@ -9,6 +10,7 @@ import TopGradientFade from "@components/ui/TopGradientFade";
 import CustomCalendar from "@components/ui/CustomCalendar";
 import { Button } from "@components/Button";
 import { Input } from "@components/Input";
+import { OpportunityCard } from "@/components/opportunity/OpportunityCard";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCalendarQuery } from "@/services/queries";
@@ -29,7 +31,8 @@ export default function EditAvailability() {
   const queryClient = useQueryClient();
 
   const [datesDict, setDatesDict] = useState<Record<string, DateDataNode>>({});
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [sharedMessage, setSharedMessage] = useState("");
   const [apiError, setApiError] = useState("");
   const [calendarMonth, setCalendarMonth] = useState({ 
     month: new Date().getMonth() + 1, 
@@ -38,7 +41,7 @@ export default function EditAvailability() {
 
   const { data: calendarData, isLoading: isCalendarLoading } = useQuery({
     queryKey: ["calendar", user?.id, calendarMonth.month, calendarMonth.year],
-    queryFn: () => getCalendarQuery({ userId: user?.id as string, month: calendarMonth.month, year: calendarMonth.year }),
+    queryFn: () => getCalendarQuery({ isOwner: true, month: calendarMonth.month, year: calendarMonth.year }),
     enabled: !!user?.id
   });
 
@@ -46,7 +49,8 @@ export default function EditAvailability() {
     mutationFn: updateAvailabilityMutation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["calendar", user?.id] });
-      setSelectedDate(null);
+      setSelectedDates([]);
+      setSharedMessage("");
       setApiError("");
     },
     onError: (err: any) => {
@@ -97,25 +101,17 @@ export default function EditAvailability() {
   }, [datesDict]);
 
   const handleMessageChange = useCallback((text: string) => {
-    if (!selectedDate) return;
-    setDatesDict(prev => {
-      const existing = prev[selectedDate] || { status: "open", opportunities: [] };
-      return {
-        ...prev,
-        [selectedDate]: { ...existing, message: text }
-      };
-    });
-  }, [selectedDate]);
+    setSharedMessage(text);
+  }, []);
 
   const handleSave = () => {
-    if (!selectedDate) return;
+    if (selectedDates.length === 0) return;
     setApiError("");
-    const data = datesDict[selectedDate] || { status: "open", message: "" };
     
     // We send the precise ISO format expected by POST /me/self-occupied
     updateAvailability({ 
-      date: `${selectedDate}T00:00:00.000Z`, 
-      message: data.message || "" 
+      date: selectedDates.map(d => `${d}T00:00:00.000Z`), 
+      message: sharedMessage 
     });
   };
 
@@ -136,8 +132,14 @@ export default function EditAvailability() {
           </View>
         </View>
 
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-          <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="flex-1 px-5 pt-6 pb-6" showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView 
+          className="flex-1 px-5 pt-6 pb-6" 
+          contentContainerStyle={{ flexGrow: 1 }} 
+          showsVerticalScrollIndicator={false} 
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 20 : 60}
+        >
             <View className="flex-1">
               <Text className="font-outfit-bold text-2xl text-black mb-2">Manage Schedule</Text>
               <Text className="font-outfit text-slate-500 mb-6">Select a date to open or block your availability.</Text>
@@ -149,24 +151,38 @@ export default function EditAvailability() {
             >
               <CustomCalendar 
                 markedDates={markedDates}
-                selectedDate={selectedDate}
-                onDayPress={(day: string) => setSelectedDate(day)}
+                selectedDates={selectedDates}
+                onDayPress={(day: string) => {
+                  const status = datesDict[day]?.status;
+                  if (status === "occupied") {
+                    setSelectedDates([day]);
+                  } else {
+                    setSelectedDates(prev => {
+                      const open = prev.filter(d => datesDict[d]?.status !== "occupied");
+                      return open.includes(day) ? open.filter(d => d !== day) : [...open, day];
+                    });
+                  }
+                  if (!sharedMessage && datesDict[day]?.message) {
+                    setSharedMessage(datesDict[day].message || "");
+                  }
+                }}
                 isLoading={isCalendarLoading}
                 onMonthChange={(month, year) => setCalendarMonth({ month, year })}
               />
             </LinearGradient>
 
             {/* Bottom Edit Panel */}
-            {selectedDate && (() => {
-              const data = datesDict[selectedDate] || { status: "open", opportunities: [] };
-              const isOccupied = data.status === "occupied";
+            {selectedDates.length > 0 && (() => {
+              const allOccupied = selectedDates.every(d => datesDict[d]?.status === "occupied");
               
               return (
                 <View className="bg-slate-50 rounded-3xl border border-slate-200 p-5 mb-8">
                   <View className="flex-row items-center justify-between mb-6">
-                    <Text className="font-outfit-bold text-lg text-black">{selectedDate}</Text>
+                    <Text className="font-outfit-bold text-lg text-black">
+                      {selectedDates.length === 1 ? selectedDates[0] : `${selectedDates.length} Dates Selected`}
+                    </Text>
                     
-                    {isOccupied && (
+                    {allOccupied && (
                       <View className="flex-row items-center bg-sky-50 border border-sky-100 rounded-full px-3 py-1.5">
                         <Lock size={14} color="#0EA5E9" />
                         <Text className="font-outfit-medium text-xs ml-1.5 text-[#0EA5E9]">
@@ -181,7 +197,7 @@ export default function EditAvailability() {
                     <Input 
                       variant="light"
                       placeholder="e.g., Traveling, Personal Work" 
-                      value={data.message || ""} 
+                      value={sharedMessage} 
                       onChangeText={handleMessageChange}
                       editable={!isUpdating}
                       multiline
@@ -189,41 +205,37 @@ export default function EditAvailability() {
                     />
                   </View>
 
-                  <Text className="font-outfit-bold text-base text-black mb-3">Linked Opportunities</Text>
-                  {data.opportunities && data.opportunities.length > 0 ? (
-                    data.opportunities.map((opp: any, idx: number) => (
-                      <View key={idx} className="bg-white border border-slate-100 rounded-2xl p-4 flex-row items-center mb-0">
-                        <View className="w-10 h-10 rounded-full bg-slate-100 items-center justify-center mr-3">
-                          <Briefcase size={18} color="#0EA5E9" />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="font-outfit-bold text-sm text-black mb-0.5">{opp.title}</Text>
-                          <Text className="font-outfit-medium text-xs text-slate-500">{opp.location}</Text>
-                        </View>
-                      </View>
-                    ))
-                  ) : (
-                    <Text className="font-outfit-medium text-sm text-slate-400 italic mt-1 mb-2">
-                      No connected opportunities.
-                    </Text>
+                  {selectedDates.length === 1 && (datesDict[selectedDates[0]]?.opportunities?.length ?? 0) > 0 && (
+                    <View>
+                      <Text className="font-outfit-bold text-base text-black mb-3">Linked Opportunities</Text>
+                      {datesDict[selectedDates[0]]?.opportunities?.map((opp: any, idx: number) => (
+                        <OpportunityCard 
+                          key={opp._id || idx} 
+                          opportunity={opp} 
+                          hideCreator
+                          onPress={() => router.push({ pathname: '/opportunity/[id]' as any, params: { id: opp._id } })} 
+                        />
+                      ))}
+                    </View>
                   )}
                 </View>
               );
             })()}
             </View>
+          </KeyboardAwareScrollView>
 
-            {/* Save Button */}
-            <View className="pb-8 pt-4">
+          {/* Fixed footer outside the scroll view */}
+          {selectedDates.length > 0 && selectedDates.every(d => datesDict[d]?.status !== "occupied") && (
+            <View className="px-5 pb-8 pt-4 bg-white border-t border-slate-100">
               {apiError ? <Text className="text-red-500 font-outfit-medium mb-4">{apiError}</Text> : null}
               <Button 
-                title="Save Availability" 
+                title={selectedDates.length > 1 ? "Book Dates" : "Book Date"} 
                 loading={isUpdating}
                 onPress={handleSave} 
-                disabled={isUpdating || !selectedDate} 
+                disabled={isUpdating || selectedDates.length === 0} 
               />
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          )}
       </SafeAreaView>
     </View>
   );

@@ -20,3 +20,11 @@ export const getStates = async (countryCode: string): Promise<any> => {
 export const getCities = async (countryCode: string, stateCode: string): Promise<any> => {
   return await apiRequest<any>({ url: `/auth/get-cities?countryCode=${countryCode}&stateCode=${stateCode}`, method: "GET" });
 };
+
+export const searchLocationSuggestions = async (query: string): Promise<any> => {
+  return await apiRequest<any>({ url: `/user/location?query=${encodeURIComponent(query)}`, method: "GET" });
+};
+
+export const reverseGeocodeLocation = async (lat: number, lng: number): Promise<any> => {
+  return await apiRequest<any>({ url: `/user/place?lat=${lat}&lng=${lng}`, method: "GET" });
+};

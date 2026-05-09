@@ -35,7 +35,7 @@ function AvailabilityCalendar({ slots }: AvailabilityCalendarProps) {
             </Text>
             <View
               className="w-11 h-11 rounded-full items-center justify-center"
-              style={{ backgroundColor: isFree ? "#FFFFFF" : "#1E293B" }}
+              style={{ backgroundColor: isFree ? "#FFFFFF" : "#0EA5E9" }}
             >
               <Text
                 className={`font-outfit-bold text-sm ${isFree ? "text-black" : "text-white"}`}

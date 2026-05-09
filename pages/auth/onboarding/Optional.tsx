@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, TextInput, Platform, StyleSheet } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,10 +56,11 @@ export default function OnboardingOptional() {
         category: "single",
         signUpType,
         profilePicture: onboardingData.profilePicture || user?.profileImage || "",
-        address: onboardingData.address || "",
-        state: onboardingData.state || "",
-        city: onboardingData.city || "",
-        location: { type: "Point", coordinates: [0, 0] },
+        location: { 
+          type: "Point", 
+          place: onboardingData.pickedLocation?.place || "",
+          coordinates: onboardingData.pickedLocation ? [onboardingData.pickedLocation.lng, onboardingData.pickedLocation.lat] : [0, 0] 
+        },
         ...(onboardingData.socialMediaLinks && Object.keys(onboardingData.socialMediaLinks).length > 0
           ? { socialMediaLinks: onboardingData.socialMediaLinks }
           : {}),
@@ -108,8 +110,8 @@ export default function OnboardingOptional() {
   const specOptions = ["Wedding", "Fashion", "Commercial", "Portrait", "Events", "Product"];
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-      <LinearGradient
+    <View className="flex-1">
+    <LinearGradient
         colors={["#5b8fbc", "#1A2b4c", "#060D1A"]}
         locations={[0, 0.4, 1]}
         style={styles.fullOverlay}
@@ -128,76 +130,83 @@ export default function OnboardingOptional() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView className="flex-1 px-6 pt-8">
-          <Text className="text-3xl font-outfit-bold text-white mb-2">Optional Info</Text>
-          <Text className="text-base font-outfit text-text-secondary mb-10">
-            Tell us about your professional background to help clients find you faster. (You can skip this for now).
-          </Text>
+        <KeyboardAwareScrollView 
+          className="flex-1 px-6 pt-6" 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 20 : 60}
+        >
+            <Text className="text-3xl font-outfit-bold text-white mb-2">Optional Info</Text>
+            <Text className="text-base font-outfit text-text-secondary mb-10">
+              Tell us about your professional background to help clients find you faster. (You can skip this for now).
+            </Text>
 
-          <View className="gap-6">
-            <View>
-              <Text className="text-xs font-outfit-medium text-text-secondary mb-2 ml-1 tracking-wider uppercase">Years of Experience</Text>
-              <View className="flex-row items-center bg-white/10 border border-white/15 rounded-xl px-2 py-1">
-                <Controller name="experience" control={control} render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    className="flex-1 px-3 py-3 font-outfit text-white text-base"
-                    placeholder="e.g. 5"
-                    keyboardType="numeric"
-                    placeholderTextColor="rgba(148,163,184,0.6)"
-                    value={value}
-                    onChangeText={onChange}
-                    editable={!isPending}
-                  />
-                )} />
-                <Text className="text-white/40 font-outfit mr-3">Years</Text>
+            <View className="gap-6">
+              <View>
+                <Text className="text-xs font-outfit-medium text-text-secondary mb-2 ml-1 tracking-wider uppercase">Years of Experience</Text>
+                <View className="flex-row items-center bg-white/10 border border-white/15 rounded-xl px-2 py-1">
+                  <Controller name="experience" control={control} render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      className="flex-1 px-3 py-3 font-outfit text-white text-base"
+                      placeholder="e.g. 5"
+                      keyboardType="numeric"
+                      placeholderTextColor="rgba(148,163,184,0.6)"
+                      value={value}
+                      onChangeText={onChange}
+                      editable={!isPending}
+                    />
+                  )} />
+                  <Text className="text-white/40 font-outfit mr-3">Years</Text>
+                </View>
+              </View>
+
+              <View>
+                <Text className="text-xs font-outfit-medium text-text-secondary mb-3 ml-1 tracking-wider uppercase">Specialization</Text>
+
+                <View className="flex-row flex-wrap gap-2">
+                  {Array.from(new Set([...specOptions, ...specializations])).map((spec) => (
+                    <TouchableOpacity
+                      key={spec}
+                      onPress={() => toggleSpecialization(spec)}
+                      disabled={isPending}
+                      className={`border rounded-full px-4 py-2 ${specializations.includes(spec) ? 'bg-[#2575FC] border-[#2575FC]' : 'bg-white/5 border-white/10'}`}
+                    >
+                      <Text className={`font-outfit text-sm ${specializations.includes(spec) ? 'text-white' : 'text-white/80'}`}>
+                        {spec}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  {isAddingCustom ? (
+                    <TextInput
+                      autoFocus
+                      className="bg-white/10 border border-[#2575FC] rounded-full px-4 py-2 font-outfit text-white text-sm min-w-[100px]"
+                      placeholder="Type custom..."
+                      placeholderTextColor="rgba(255,255,255,0.4)"
+                      value={customSpec}
+                      onChangeText={setCustomSpec}
+                      onSubmitEditing={handleAddCustomSpec}
+                      onBlur={() => setIsAddingCustom(false)}
+                      returnKeyType="done"
+                    />
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => setIsAddingCustom(true)}
+                      disabled={isPending}
+                      className="bg-white/10 border border-white/20 rounded-full px-4 py-2"
+                    >
+                      <Text className="text-white font-outfit text-sm">+ Add Custom</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
+            <View className="h-20" />
+          </KeyboardAwareScrollView>
+        
 
-            <View>
-              <Text className="text-xs font-outfit-medium text-text-secondary mb-3 ml-1 tracking-wider uppercase">Specialization</Text>
-
-              <View className="flex-row flex-wrap gap-2">
-                {Array.from(new Set([...specOptions, ...specializations])).map((spec) => (
-                  <TouchableOpacity
-                    key={spec}
-                    onPress={() => toggleSpecialization(spec)}
-                    disabled={isPending}
-                    className={`border rounded-full px-4 py-2 ${specializations.includes(spec) ? 'bg-[#2575FC] border-[#2575FC]' : 'bg-white/5 border-white/10'}`}
-                  >
-                    <Text className={`font-outfit text-sm ${specializations.includes(spec) ? 'text-white' : 'text-white/80'}`}>
-                      {spec}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-
-                {isAddingCustom ? (
-                  <TextInput
-                    autoFocus
-                    className="bg-white/10 border border-[#2575FC] rounded-full px-4 py-2 font-outfit text-white text-sm min-w-[100px]"
-                    placeholder="Type custom..."
-                    placeholderTextColor="rgba(255,255,255,0.4)"
-                    value={customSpec}
-                    onChangeText={setCustomSpec}
-                    onSubmitEditing={handleAddCustomSpec}
-                    onBlur={() => setIsAddingCustom(false)}
-                    returnKeyType="done"
-                  />
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => setIsAddingCustom(true)}
-                    disabled={isPending}
-                    className="bg-white/10 border border-white/20 rounded-full px-4 py-2"
-                  >
-                    <Text className="text-white font-outfit text-sm">+ Add Custom</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          </View>
-
-        </ScrollView>
-
-        {/* Bottom Bar */}
+        {/* Bottom Bar - Outside KAV so it stays pinned on iOS */}
         <View className="p-6 pt-4 border-t border-white/5 bg-[#060D1A]/80">
           {apiError && (
             <Text className="text-red-500 font-outfit-medium text-left mb-3">{apiError}</Text>
@@ -222,7 +231,7 @@ export default function OnboardingOptional() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

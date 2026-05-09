@@ -65,7 +65,9 @@ export function usePortfolioUpload() {
         throw new Error("Failed to get upload URL from server");
       }
 
-      // 3. Start Native Background Upload
+      // 3. Start Native Background Upload (works on both iOS and Android)
+      // The file is persisted to documentDirectory inside startPortfolioUpload
+      // so iOS's NSURLSession can access it in the background process.
       const nativeJobId = await startPortfolioUpload(
         params.fileUri,
         response.uploadUrl,

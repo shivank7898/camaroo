@@ -2,9 +2,10 @@ import React from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, User, Calendar, Shield, LogOut, ChevronRight } from "lucide-react-native";
+import { ArrowLeft, User, Calendar, Shield, LogOut, ChevronRight, Briefcase } from "lucide-react-native";
 import TopGradientFade from "@components/ui/TopGradientFade";
 import { SETTINGS_MENU } from "@constants";
+import { useLogout } from "@hooks/useLogout";
 
 // Map string keys from constant to Lucas React Native components
 const renderIcon = (iconName: string) => {
@@ -13,12 +14,14 @@ const renderIcon = (iconName: string) => {
     case "user": return <User {...props} />;
     case "calendar": return <Calendar {...props} />;
     case "shield": return <Shield {...props} />;
+    case "briefcase": return <Briefcase {...props} />;
     default: return <User {...props} />;
   }
 };
 
 export default function Settings() {
   const router = useRouter();
+  const { handleLogout } = useLogout();
 
   return (
     <View className="flex-1 bg-white">
@@ -56,6 +59,15 @@ export default function Settings() {
               </TouchableOpacity>
             ))}
           </View>
+          
+          <TouchableOpacity 
+            activeOpacity={0.8} 
+            onPress={() => Alert.alert("Logout", "Are you sure you want to log out?", [{ text: "Cancel", style: "cancel" }, { text: "Logout", style: "destructive", onPress: handleLogout }])} 
+            className="flex-row items-center justify-center py-4 rounded-xl bg-red-50 border border-red-100 mt-2"
+          >
+            <LogOut size={18} color="#EF4444" className="mr-2" />
+            <Text className="font-outfit-bold text-red-500 text-base mt-0.5">Log Out</Text>
+          </TouchableOpacity>
           
           <Text className="text-center font-outfit text-slate-400 text-xs mt-6 mb-10">
             Camaroo App v1.0.0

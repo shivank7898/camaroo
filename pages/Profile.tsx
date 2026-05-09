@@ -10,12 +10,12 @@ import {
   Share,
   Alert,
   StyleSheet,
-  Animated
+  Animated,
+  ActivityIndicator
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import Toast from 'react-native-toast-message';
+import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   Settings,
   MapPin,
@@ -24,7 +24,9 @@ import {
   Lock,
   Heart,
   Share2,
-  MoreHorizontal
+  MoreHorizontal,
+  ChevronRight,
+  Users
 } from "lucide-react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { updateProfileMutation, likePortfolioPostMutation, unlikePortfolioPostMutation, updatePortfolioMutation } from "@services/mutations";
@@ -34,12 +36,15 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import type { UserProfile, ProfileUpdatePayload } from "@/types/auth";
 import { useProfileImageUpload } from "@hooks/useProfileImageUpload";
 import { ProgressRing } from "@components/ui/ProgressRing";
+import DefaultProfilePicture from "@/components/ui/DefaultProfilePicture";
 // Shared components
 
 import TopGradientFade from "@components/ui/TopGradientFade";
 import CollapsibleSection from "@components/ui/CollapsibleSection";
-import SocialIconsRow from "@components/profile/SocialIconsRow";
 import AvailabilityCalendar from "@components/profile/AvailabilityCalendar";
+import { ProfileTabBar, type ProfileTabSpec } from "@/components/profile/ProfileTabBar";
+import { useOpportunities } from "@/hooks/useOpportunities";
+import { OpportunityCard } from "@/components/opportunity/OpportunityCard";
 
 // Stores
 import { useUserStore } from "@store/userStore";
@@ -49,10 +54,30 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PORTFOLIO_ITEM_SIZE = Math.floor(SCREEN_WIDTH / 3);
 
 function ModalVideoPlayer({ uri }: { uri: string }) {
+  const [hasPlayed, setHasPlayed] = useState(false);
   const player = useVideoPlayer(uri, player => {
     player.loop = true;
     player.play();
   });
+
+  React.useEffect(() => {
+    let interval = setInterval(() => {
+      if (player.playing || player.currentTime > 0) {
+        setHasPlayed(true);
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [player]);
+
+  // Cleanup: release player on unmount to prevent OOM
+  React.useEffect(() => {
+    return () => {
+      try {
+        player.pause();
+      } catch (_) {}
+    };
+  }, [player]);
 
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const [showPlay, setShowPlay] = useState(false);
@@ -90,6 +115,11 @@ function ModalVideoPlayer({ uri }: { uri: string }) {
         contentFit="contain"
         nativeControls={false}
       />
+      {!hasPlayed && (
+        <View className="absolute inset-0 items-center justify-center bg-[#0F172A] z-10 w-full h-full" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0}}>
+           <ActivityIndicator size="large" color="#94A3B8" />
+        </View>
+      )}
       <View style={{ ...StyleSheet.absoluteFillObject, flexDirection: "row" }} collapsable={false}>
         <TouchableOpacity activeOpacity={1} onPress={handlePress} onLongPress={seekBackward} delayLongPress={500} style={{ flex: 1 }} />
         <TouchableOpacity activeOpacity={1} onPress={handlePress} onLongPress={seekForward} delayLongPress={500} style={{ flex: 1 }} />
@@ -114,12 +144,15 @@ export default function ProfilePage() {
   const setUserData = useUserStore((s) => s.setUserData);
   const profile = userData?.user;
 
+  console.log("[Profile Page] Target Profile Pic URL:", profile?.profilePicture);
+
   // Use real profile data — show empty/defaults if not available
   const user = {
     name: profile?.fullName || "",
     profileImage: profile?.profilePicture || "",
     category: profile?.role || [],
     location: profile?.address || "",
+    subscriberCount: profile?.subscriberCount || 0,
     bio: profile?.specialization ? `${profile.specialization} • ${profile.yearsOfExperience || 0} years experience` : "",
     contactEmail: profile?.email || "",
     contactPhone: profile?.mobile || "",
@@ -132,7 +165,7 @@ export default function ProfilePage() {
 
   const { data: portfolioResponse, isLoading: isPortfolioLoading } = useQuery({
     queryKey: ["my-portfolio"],
-    queryFn: getUserPortfolioQuery,
+    queryFn: () => getUserPortfolioQuery({ isOwner: true }),
   });
 
   let portfolioItems: PortfolioPost[] = [];
@@ -145,6 +178,25 @@ export default function ProfilePage() {
   const [selectedItem, setSelectedItem] = useState<PortfolioPost | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [profileImage, setProfileImage] = useState(user.profileImage);
+  const [activeTab, setActiveTab] = useState<ProfileTabSpec>("portfolio");
+  const tabScrollRef = useRef<ScrollView>(null);
+  const { tab } = useLocalSearchParams<{ tab: string }>();
+
+  React.useEffect(() => {
+    if (tab === "opportunities") {
+      setActiveTab("opportunities");
+      setTimeout(() => {
+        tabScrollRef.current?.scrollTo({ x: SCREEN_WIDTH, animated: false });
+      }, 0);
+    }
+  }, [tab]);
+
+  const handleTabChange = useCallback((newTab: ProfileTabSpec) => {
+    setActiveTab(newTab);
+    tabScrollRef.current?.scrollTo({ x: newTab === "portfolio" ? 0 : SCREEN_WIDTH, animated: true });
+  }, []);
+
+  const { opportunities: myOpportunities, isLoading: opportunitiesLoading } = useOpportunities({ isOwner: true, sortBy: "createdAt", sortValue: -1 });
   const insets = useSafeAreaInsets();
 
   // ─── Rolling 7-Day Availability Logic ───
@@ -154,10 +206,15 @@ export default function ProfilePage() {
 
   // Fetch current month's calendar data
   const { data: calendarData } = useQuery({
-    queryKey: ["availability", profile?._id, currentMonth, currentYear],
-    queryFn: () => getCalendarQuery({ userId: profile?._id || "", month: currentMonth, year: currentYear }),
+    queryKey: ["availability", "me", currentMonth, currentYear],
+    queryFn: () => getCalendarQuery({ isOwner: true, month: currentMonth, year: currentYear }),
     enabled: !!profile?._id,
   });
+
+  // Extract occupied date strings from calendar API response
+  const occupiedDateStrings = (calendarData?.dates || [])
+    .filter((d: any) => d.status === "occupied")
+    .map((d: any) => new Date(d.date).toISOString().split('T')[0]);
 
   // Map to 7-day strip format
   const rollingSlots = Array.from({ length: 7 }).map((_, i) => {
@@ -167,8 +224,7 @@ export default function ProfilePage() {
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
     const dateNum = d.getDate().toString();
 
-    // Check if occupied in API response
-    const isOccupied = calendarData?.occupiedDates?.includes(dateStr);
+    const isOccupied = occupiedDateStrings.includes(dateStr);
     
     return {
       day: dayName,
@@ -179,7 +235,7 @@ export default function ProfilePage() {
 
   const CARD_WIDTH = SCREEN_WIDTH * 0.82;
 
-  const { mutate: updateProfile } = useMutation({
+  const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation({
     mutationFn: async (payload: ProfileUpdatePayload) => await updateProfileMutation(payload),
     onSuccess: (_, variables) => {
       if (variables.profilePicture) {
@@ -200,7 +256,26 @@ export default function ProfilePage() {
   } = useProfileImageUpload({
     userId: profile?._id,
     onSuccess: (url) => {
-      updateProfile({ profilePicture: url });
+      if (!profile) return;
+      const payload: ProfileUpdatePayload = {
+        fullName: profile.fullName || "User",
+        role: profile.role || [],
+        category: "single",
+        signUpType: profile.signUpType || "email",
+        profilePicture: url,
+        location: profile.location || { type: "Point", coordinates: [0, 0] },
+      };
+
+      if (profile.socialMediaLinks && Object.keys(profile.socialMediaLinks).length > 0) {
+        payload.socialMediaLinks = profile.socialMediaLinks;
+      }
+      if (profile.signUpType === "mobile") {
+        payload.email = profile.email || "";
+      } else {
+        payload.mobile = profile.mobile || "";
+      }
+
+      updateProfile(payload);
     }
   });
 
@@ -209,8 +284,7 @@ export default function ProfilePage() {
   const handleAddPost = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
-      allowsEditing: true,
-      aspect: [1, 1], // square crop for images
+      allowsEditing: false,
       quality: 0.8,
     });
 
@@ -226,11 +300,10 @@ export default function ProfilePage() {
           const is4by3 = Math.abs(ratio - 4 / 3) < 0.1 || Math.abs(ratio - 3 / 4) < 0.1;
 
           if (!is16by9 && !is4by3) {
-            Toast.show({
-              type: 'error',
-              text1: 'Invalid Video Format',
-              text2: 'Please upload a 16:9 or 4:3 video.',
-            });
+            Alert.alert(
+              'Invalid Video Format',
+              'Please upload a 16:9 or 4:3 video.'
+            );
             return;
           }
         }
@@ -292,7 +365,7 @@ export default function ProfilePage() {
           }
         } catch (e: any) {
           queryClient.invalidateQueries({ queryKey: ["my-portfolio"] });
-          Toast.show({ type: "error", text1: "Like failed", text2: e.message });
+          Alert.alert("Like failed", e.message);
         }
       }
     }, 800);
@@ -333,7 +406,13 @@ export default function ProfilePage() {
           <TouchableOpacity activeOpacity={1} className="w-[92%] bg-white rounded-3xl py-4 shadow-xl select-none" onPress={() => setShowDropdown(false)}>
             {/* Header Box */}
             <View className="flex-row items-center mb-3 px-4 z-10">
-              <Image source={{ uri: user.profileImage }} className="w-10 h-10 rounded-full" />
+              {user.profileImage ? (
+                <Image source={{ uri: user.profileImage }} className="w-10 h-10 rounded-full flex-shrink-0" />
+              ) : (
+                <View className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
+                  <DefaultProfilePicture />
+                </View>
+              )}
               <View className="flex-1 mx-3">
                 <Text className="font-outfit-bold text-base text-slate-900">{user.name}</Text>
               </View>
@@ -377,14 +456,14 @@ export default function ProfilePage() {
 
             {/* Full image/video edge-to-edge */}
             {selectedItem && (
-              <View className="w-full bg-slate-900 items-center justify-center z-0">
+              <View className="w-full bg-slate-900 items-center justify-center z-0" style={{ height: 400 }}>
                 {selectedItem.mediaUrls?.mediaType === "video" ? (
                   <ModalVideoPlayer uri={selectedItem.mediaUrls?.url || ""} />
                 ) : (
                   <Image
                     source={{ uri: selectedItem.mediaUrls?.url || selectedItem.coverUrls?.url || "" }}
-                    style={{ width: "100%", aspectRatio: 1 }}
-                    resizeMode="cover"
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="contain"
                   />
                 )}
               </View>
@@ -470,9 +549,9 @@ export default function ProfilePage() {
                             });
                             queryClient.invalidateQueries({ queryKey: ["my-portfolio"] });
                             setSelectedItem(prev => prev ? { ...prev, visibility: prev.visibility === "public" ? "private" : "public" } : null);
-                            Toast.show({ type: "success", text1: "Visibility updated" });
+                            Alert.alert("Success", "Visibility updated");
                           } catch (e: any) {
-                            Toast.show({ type: "error", text1: "Failed to update visibility" });
+                            Alert.alert("Error", "Failed to update visibility");
                           }
                         }}
                       >
@@ -508,11 +587,21 @@ export default function ProfilePage() {
 
           {/* ─── Profile Header ─── */}
           <View className="px-5 mt-2 flex-row items-start">
-            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8} disabled={isUploading} className="relative mr-4 bg-white rounded-full">
-              <Image source={{ uri: displayImage }} className="w-24 h-24 rounded-full" />
+            <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8} disabled={isUploading || isUpdatingProfile} className="relative mr-4 bg-white rounded-full">
+              {displayImage ? (
+                <Image source={{ uri: displayImage }} className="w-24 h-24 rounded-full bg-slate-100" style={{ opacity: isUpdatingProfile ? 0.8 : 1 }} />
+              ) : (
+                <View className="w-24 h-24 rounded-full overflow-hidden bg-slate-100" style={{ opacity: isUpdatingProfile ? 0.8 : 1 }}>
+                  <DefaultProfilePicture />
+                </View>
+              )}
               {(isUploading || uploadProgress > 0) ? (
-                <View className="absolute inset-0 z-10 items-center justify-center pointer-events-none">
-                  <ProgressRing progress={uploadProgress} size={96} strokeWidth={3} backgroundColor="transparent" />
+                <View className="absolute inset-0 z-10 items-center justify-center pointer-events-none bg-black/50 rounded-full">
+                  <ActivityIndicator size="small" color="#0EA5E9" />
+                </View>
+              ) : isUpdatingProfile ? (
+                <View className="absolute inset-0 z-10 items-center justify-center pointer-events-none bg-black/40 rounded-full">
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 </View>
               ) : (
                 <View className="absolute bottom-0 right-0 w-7 h-7 bg-[#0EA5E9] rounded-full items-center justify-center border-2 border-white pointer-events-none">
@@ -529,9 +618,15 @@ export default function ProfilePage() {
               <Text className="font-outfit-medium text-sm text-slate-500 mt-0.5">
                 {user.category.join(" • ")}
               </Text>
-              <View className="flex-row items-center mt-1.5 gap-1">
-                <MapPin size={13} color="#64748B" />
-                <Text className="font-outfit text-sm text-slate-500">{user.location}</Text>
+              <View className="flex-row items-center mt-1.5 gap-2 flex-wrap">
+                <View className="flex-row items-center gap-1">
+                  <MapPin size={13} color="#64748B" />
+                  <Text className="font-outfit text-sm text-slate-500 mr-2">{user.location}</Text>
+                </View>
+                <View className="flex-row items-center gap-1">
+                  <Users size={13} color="#64748B" />
+                  <Text className="font-outfit text-sm text-slate-500">{user.subscriberCount} Subscribers</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -543,88 +638,128 @@ export default function ProfilePage() {
             </View>
           ) : null}
 
-          <View style={{ marginTop: user.bio ? -8 : 4 }}>
-            <SocialIconsRow
-              email={user.contactEmail}
-              phone={user.contactPhone}
-              instagram={user.socialLinks.instagram}
-              youtube={user.socialLinks.youtube}
-              website={user.socialLinks.website}
-            />
-          </View>
+          <View className="mt-4" />
 
           {/* ─── Availability — real data strip ─── */}
           <CollapsibleSection title="Availability" defaultOpen={true}>
-            <View className="mb-3 flex-row justify-end px-1">
-              <TouchableOpacity onPress={() => router.push("/settings/availability")}>
-                <Text className="font-outfit-medium text-xs text-[#0EA5E9]">Edit Schedule</Text>
+            <View className="mb-4 flex-row justify-end px-1 mt-2">
+              <TouchableOpacity onPress={() => router.push("/settings/availability")} className="py-2 px-3 bg-sky-50 rounded-lg">
+                <Text className="font-outfit-bold text-sm text-[#0EA5E9]">Edit Schedule</Text>
               </TouchableOpacity>
             </View>
             <AvailabilityCalendar slots={rollingSlots} />
           </CollapsibleSection>
 
-          {/* ─── Portfolio Grid ─── */}
+          {/* ─── Profile Tabs ─── */}
           <View className="mt-6">
-            <View className="flex-row flex-wrap">
-              {/* Add tile */}
-              <TouchableOpacity
-                onPress={handleAddPost}
-                activeOpacity={0.7}
-                style={{ width: PORTFOLIO_ITEM_SIZE, height: PORTFOLIO_ITEM_SIZE, borderWidth: 0.5, borderColor: "#FFF", backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center" }}
-              >
-                <View className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-sm">
-                  <Plus size={20} color="#0EA5E9" />
-                </View>
-                <Text className="font-outfit-medium text-[10px] text-slate-400 mt-2">Add</Text>
-              </TouchableOpacity>
-
-              {/* Portfolio items */}
-              {isPortfolioLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <View
-                    key={`skeleton-${i}`}
-                    style={{
-                      width: PORTFOLIO_ITEM_SIZE,
-                      height: PORTFOLIO_ITEM_SIZE,
-                      borderWidth: 0.5,
-                      borderColor: "#FFF",
-                      backgroundColor: "#F8FAFC", // slightly distinct from Add bg
-                      position: "relative"
-                    }}
-                  >
-                    <View className="absolute inset-0 bg-slate-200/40" />
-                  </View>
-                ))
-              ) : (
-                portfolioItems.map((item) => (
-                  <TouchableOpacity
-                    key={item._id}
-                    activeOpacity={0.85}
-                    onPress={() => setSelectedItem(item)}
-                    style={{
-                      width: PORTFOLIO_ITEM_SIZE,
-                      height: PORTFOLIO_ITEM_SIZE,
-                      borderWidth: 0.5,
-                      borderColor: "#F1F5F9",
-                      backgroundColor: "#F8FAFC",
-                      position: 'relative'
-                    }}
-                  >
-                    <Image
-                      source={{ uri: item.coverUrls?.url || item.mediaUrls?.url || "" }}
-                      style={{ width: "100%", height: "100%", position: "absolute" }}
-                      resizeMode="cover"
-                    />
-                    {item.visibility === "private" && (
-                      <View className="absolute top-1.5 right-1.5 bg-black/60 rounded-full p-1">
-                        <Lock size={10} color="#FFF" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
+            <ProfileTabBar activeTab={activeTab} onTabChange={handleTabChange} />
           </View>
+
+          {/* ─── Tab Content ─── */}
+          <ScrollView
+            ref={tabScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            bounces={false}
+            nestedScrollEnabled
+            scrollEventThrottle={16}
+            onMomentumScrollEnd={(e) => {
+              const newIndex = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setActiveTab(newIndex === 0 ? "portfolio" : "opportunities");
+            }}
+          >
+            <View style={{ width: SCREEN_WIDTH }}>
+              <View className="flex-row flex-wrap mt-4">
+                {/* Add tile */}
+                <TouchableOpacity
+                  onPress={handleAddPost}
+                  activeOpacity={0.7}
+                  style={{ width: PORTFOLIO_ITEM_SIZE, height: PORTFOLIO_ITEM_SIZE, borderWidth: 0.5, borderColor: "#FFF", backgroundColor: "#F1F5F9", alignItems: "center", justifyContent: "center" }}
+                >
+                  <View className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-sm">
+                    <Plus size={20} color="#0EA5E9" />
+                  </View>
+                  <Text className="font-outfit-medium text-[10px] text-slate-400 mt-2">Add</Text>
+                </TouchableOpacity>
+
+                {/* Portfolio items */}
+                {isPortfolioLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <View
+                      key={`skeleton-${i}`}
+                      style={{ width: PORTFOLIO_ITEM_SIZE, height: PORTFOLIO_ITEM_SIZE, borderWidth: 0.5, borderColor: "#FFF", backgroundColor: "#F8FAFC", position: "relative" }}
+                    >
+                      <View className="absolute inset-0 bg-slate-200/40" />
+                    </View>
+                  ))
+                ) : (
+                  portfolioItems.map((item) => (
+                    <TouchableOpacity
+                      key={item._id}
+                      activeOpacity={0.85}
+                      onPress={() => setSelectedItem(item)}
+                      style={{ width: PORTFOLIO_ITEM_SIZE, height: PORTFOLIO_ITEM_SIZE, borderWidth: 0.5, borderColor: "#F1F5F9", backgroundColor: "#F8FAFC", position: 'relative' }}
+                    >
+                      <Image source={{ uri: item.coverUrls?.url || item.mediaUrls?.url || "" }} style={{ width: "100%", height: "100%", position: "absolute" }} resizeMode="cover" />
+                      {item.visibility === "private" && (
+                        <View className="absolute top-1.5 right-1.5 bg-black/60 rounded-full p-1">
+                          <Lock size={10} color="#FFF" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))
+                )}
+              </View>
+            </View>
+
+
+            <View style={{ width: SCREEN_WIDTH }}>
+              <View className="mt-4 px-5">
+
+                {/* Header row with My Applications link — mirrors Edit Schedule */}
+                <View className="mb-4 flex-row justify-end px-1">
+                  <TouchableOpacity onPress={() => router.push('/settings/my-applications' as any)} className="py-2 px-3 bg-sky-50 rounded-lg">
+                    <Text className="font-outfit-bold text-sm text-[#0EA5E9]">View My Applications</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Post new tile */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/opportunity/create')}
+                  className="bg-slate-50 rounded-2xl p-5 mb-3 border border-slate-200 items-center justify-center"
+                  style={{ minHeight: 100 }}
+                >
+                  <View className="w-10 h-10 rounded-full bg-white shadow-sm items-center justify-center mb-2">
+                    <Plus size={18} color="#0EA5E9" />
+                  </View>
+                  <Text className="font-outfit-medium text-sm text-slate-500">Post New Opportunity</Text>
+                </TouchableOpacity>
+
+                {/* Posted list */}
+                {opportunitiesLoading ? (
+                  <View className="items-center justify-center py-6 opacity-60">
+                    <Text className="font-outfit-medium text-slate-500">Loading...</Text>
+                  </View>
+                ) : myOpportunities.length === 0 ? (
+                  <View className="items-center justify-center py-8 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
+                    <Text className="font-outfit-medium text-slate-400">No opportunities posted yet.</Text>
+                  </View>
+                ) : (
+                  myOpportunities.map((opp) => (
+                    <OpportunityCard
+                      key={opp._id}
+                      opportunity={opp}
+                      onPress={(id) => router.push({ pathname: '/opportunity/[id]' as any, params: { id } })}
+                    />
+                  ))
+                )}
+
+              </View>
+            </View>
+
+          </ScrollView>
         </ScrollView>
       </SafeAreaView>
     </View>

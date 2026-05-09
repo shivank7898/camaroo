@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, Switch, TouchableOpacity, Image, ScrollView } from "react-native";
+import { View, Text, Switch, TouchableOpacity, Image, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft } from "lucide-react-native";
 import { Input } from "@components/Input";
 import { Loader } from "@components/ui/Loader";
-import Toast from 'react-native-toast-message';
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updatePortfolioMutation } from "@services/mutations";
 import type { PortfolioPost, PaginatedPortfolioResponse } from "@/types/portfolio";
@@ -40,7 +39,7 @@ export default function EditPostScreen() {
 
   useEffect(() => {
     if (!post) {
-      Toast.show({ type: 'error', text1: 'Post Not Found', text2: 'This post could not be loaded.' });
+      Alert.alert("Post Not Found", "This post could not be loaded.");
       router.back();
     }
   }, [post, router]);
@@ -85,12 +84,12 @@ export default function EditPostScreen() {
 
       await updatePostDetails({ id: post._id, payload });
       await queryClient.invalidateQueries({ queryKey: ["my-portfolio"] });
-      Toast.show({ type: 'success', text1: 'Post Updated', text2: 'Changes saved successfully.' });
+      Alert.alert("Post Updated", "Changes saved successfully.");
       router.back();
     } catch (error: any) {
       const msg = error?.message || 'Something went wrong. Please try again.';
       setErrorMessage(msg);
-      Toast.show({ type: 'error', text1: 'Update Failed', text2: msg });
+      Alert.alert("Update Failed", msg);
       setIsSubmitting(false);
     }
   };

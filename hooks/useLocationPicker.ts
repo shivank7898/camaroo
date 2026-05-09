@@ -1,42 +1,61 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { getCountries, getStates, getCities } from "@services/location";
+import { useEffect, useMemo, useState } from "react";
 import type { LocationItem, CityItem, PickerOption } from "@/types/auth";
+import { useLocationStore } from "@/store/locationStore";
 
 /**
  * useLocationPicker
  * Encapsulates all location dropdown queries (Countries, States, Cities)
- * and returns properly typed picker items for SearchablePicker.
+ * and returns properly typed picker items for SearchablePicker using a persistant store.
  */
 export function useLocationPicker(selectedCountry: string, selectedState: string) {
-  const { data: countriesRes, isLoading: countriesLoading } = useQuery({
-    queryKey: ["countries"],
-    queryFn: getCountries
-  });
+  const { countries, statesByCountry, citiesByState, fetchCountries, fetchStates, fetchCities } = useLocationStore();
+  const [countriesLoading, setCountriesLoading] = useState(false);
+  const [statesLoading, setStatesLoading] = useState(false);
+  const [citiesLoading, setCitiesLoading] = useState(false);
 
-  const { data: statesRes, isLoading: statesLoading } = useQuery({
-    queryKey: ["states", selectedCountry],
-    queryFn: () => getStates(selectedCountry),
-    enabled: !!selectedCountry
-  });
+  useEffect(() => {
+    const initCountries = async () => {
+      setCountriesLoading(true);
+      await fetchCountries();
+      setCountriesLoading(false);
+    };
+    initCountries();
+  }, [fetchCountries]);
 
-  const { data: citiesRes, isLoading: citiesLoading } = useQuery({
-    queryKey: ["cities", selectedCountry, selectedState],
-    queryFn: () => getCities(selectedCountry, selectedState),
-    enabled: !!selectedCountry && !!selectedState
-  });
+  useEffect(() => {
+    const initStates = async () => {
+      if (!selectedCountry) return;
+      setStatesLoading(true);
+      await fetchStates(selectedCountry);
+      setStatesLoading(false);
+    };
+    initStates();
+  }, [selectedCountry, fetchStates]);
+
+  useEffect(() => {
+    const initCities = async () => {
+      if (!selectedCountry || !selectedState) return;
+      setCitiesLoading(true);
+      await fetchCities(selectedCountry, selectedState);
+      setCitiesLoading(false);
+    };
+    initCities();
+  }, [selectedCountry, selectedState, fetchCities]);
 
   const countryItems: PickerOption[] = useMemo(() => {
-    return (countriesRes?.data?.countryList || []).map((c: LocationItem) => ({ label: c.name, value: c.isoCode }));
-  }, [countriesRes?.data?.countryList]);
+    return countries.map((c: LocationItem) => ({ label: c.name, value: c.isoCode }));
+  }, [countries]);
 
   const stateItems: PickerOption[] = useMemo(() => {
-    return (statesRes?.data?.stateList || []).map((s: LocationItem) => ({ label: s.name, value: s.isoCode }));
-  }, [statesRes?.data?.stateList]);
+    const lists = statesByCountry[selectedCountry] || [];
+    return lists.map((s: LocationItem) => ({ label: s.name, value: s.isoCode }));
+  }, [statesByCountry, selectedCountry]);
 
   const cityItems: PickerOption[] = useMemo(() => {
-    return (citiesRes?.data?.cityList || []).map((c: CityItem) => ({ label: c.name, value: c.name }));
-  }, [citiesRes?.data?.cityList]);
+    const cacheKey = `${selectedCountry}_${selectedState}`;
+    const lists = citiesByState[cacheKey] || [];
+    return lists.map((c: CityItem) => ({ label: c.name, value: c.name }));
+  }, [citiesByState, selectedCountry, selectedState]);
 
   return {
     countryItems,

@@ -4,23 +4,40 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useRouter } from "expo-router";
 import { Camera, Search, HelpCircle, FileText, Calendar, BookOpen, Receipt, Bell } from "lucide-react-native";
 import { useAuthStore } from "@store/authStore";
+import { useUserStore } from "@store/userStore";
 import TopGradientFade from "@components/ui/TopGradientFade";
 import { LinearGradient } from "expo-linear-gradient";
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { userData } = useUserStore();
+  const profile = userData?.user;
 
-  const ActionButton = ({ icon: Icon, label, onPress }: any) => (
+  console.log("[Dashboard Topbar] Target Profile Pic URL:", profile?.profilePicture);
+
+  const ActionButton = ({ icon: Icon, label, onPress, primary = false }: any) => (
     <TouchableOpacity
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       onPress={onPress}
-      className="w-[30%] aspect-square rounded-[20px] items-center justify-center p-2"
+      className={`mb-3 border ${primary ? 'border-sky-400/50 shadow-md' : 'border-slate-200/60 shadow-sm'}`}
+      style={{ width: "31%", aspectRatio: 1, borderRadius: 22, overflow: "hidden" }}
     >
-      <Icon color="#334155" size={28} strokeWidth={1.8} />
-      <Text className="font-outfit-medium text-xs mt-3 text-center text-slate-600">
-        {label}
-      </Text>
+      <LinearGradient 
+        colors={primary ? ["#38BDF8", "#0284C7"] : ["#F8FAFC", "#F1F5F9"]} 
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 }}>
+        <View className={`w-10 h-10 rounded-[14px] items-center justify-center mb-1.5 ${primary ? 'bg-white/20' : 'bg-white/60 shadow-sm'}`}>
+          <Icon color={primary ? "#FFFFFF" : "#475569"} size={20} strokeWidth={2.2} />
+        </View>
+        <Text 
+          className={`font-outfit-bold text-[11px] text-center w-full ${primary ? "text-white" : "text-slate-600"}`} 
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -75,7 +92,7 @@ export default function DashboardScreen() {
               style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
             >
               <Image
-                source={{ uri: user?.profileImage || "https://github.com/shadcn.png" }}
+                source={{ uri: profile?.profilePicture || "https://github.com/shadcn.png" }}
                 className="w-11 h-11 rounded-full border-2 border-white shadow-sm"
                 resizeMode="cover"
               />
@@ -87,15 +104,15 @@ export default function DashboardScreen() {
 
           {/* Gears Section */}
           <GlassSection title="Gears">
-            <ActionButton icon={Camera} label="Rental" />
+            <ActionButton icon={Camera} label="New Product" />
             <ActionButton icon={Camera} label="Used" />
-            <ActionButton icon={Camera} label="New" primary />
+            <ActionButton icon={Camera} label="New" primary onPress={() => router.push('/market')} />
           </GlassSection>
 
           {/* Advanced Search Section */}
           <GlassSection title="Advanced Search">
             <ActionButton icon={Search} label="Adv. Search" />
-            <ActionButton icon={FileText} label="Req." />
+            <ActionButton icon={FileText} label="Req." onPress={() => router.push('/opportunities')} />
             <ActionButton icon={HelpCircle} label="Help?" />
           </GlassSection>
 

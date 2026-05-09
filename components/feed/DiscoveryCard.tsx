@@ -1,15 +1,16 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Image } from "react-native";
+import DefaultProfilePicture from "@/components/ui/DefaultProfilePicture";
 import { LinearGradient } from "expo-linear-gradient";
 
 interface DiscoveryCardProps {
-  id: number;
+  id: string;
   name: string;
   role: string;
   location: string;
   isAvailable: boolean;
   image: string;
-  onPress: (id: number) => void;
+  onPress: (id: string) => void;
 }
 
 /**
@@ -24,37 +25,27 @@ interface DiscoveryCardProps {
  * Functions: none (calls onPress prop)
  */
 function DiscoveryCard({ id, name, role, location, isAvailable, image, onPress }: DiscoveryCardProps) {
+  const handlePress = React.useCallback(() => onPress(id), [id, onPress]);
+
   return (
     <TouchableOpacity
       activeOpacity={0.9}
-      onPress={() => onPress(id)}
-      className="w-28 h-40 mr-4 rounded-[28px] overflow-hidden relative shadow-sm border border-black/5"
+      onPress={handlePress}
+      className="mr-3 shadow-sm"
+      style={{ shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
     >
-      <Image source={{ uri: image }} className="w-full h-full absolute" resizeMode="cover" />
-      <LinearGradient
-        colors={["transparent", "rgba(0,0,0,0.8)"]}
-        className="w-full h-[65%] absolute bottom-0"
-      />
-
-      {/* Floating Avatar */}
-      <View className="absolute top-2.5 left-2.5 w-10 h-10 rounded-full border-2 border-white overflow-hidden">
-        <Image source={{ uri: image }} className="w-full h-full" resizeMode="cover" />
-      </View>
-
-      {/* Availability Dot */}
-      {isAvailable && (
-        <View className="absolute top-3 right-3 w-3 h-3 rounded-full bg-green-500 border-2 border-white shadow-sm" />
+      {image ? (
+        <Image 
+          source={{ uri: image }} 
+          className="w-16 h-16 rounded-full border-2 border-white bg-slate-100" 
+          resizeMode="cover" 
+        />
+      ) : (
+        <View className="w-16 h-16 rounded-full border-2 border-white overflow-hidden bg-slate-100">
+          <DefaultProfilePicture />
+        </View>
       )}
-
-      {/* Identity Text */}
-      <View className="absolute bottom-4 left-3 right-3">
-        <Text className="text-white font-outfit-bold text-sm tracking-tight" numberOfLines={1}>
-          {name}
-        </Text>
-        <Text className="text-white/80 font-outfit-medium text-[10px] mt-0.5" numberOfLines={1}>
-          {role} • {location}
-        </Text>
-      </View>
+      <Text className="font-outfit-medium text-slate-800 text-[11px] text-center mt-1.5 w-16" numberOfLines={1}>{name}</Text>
     </TouchableOpacity>
   );
 }

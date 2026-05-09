@@ -12,17 +12,17 @@ import TopGradientFade from "@components/ui/TopGradientFade";
 import CollapsibleSection from "@components/ui/CollapsibleSection";
 import { Input } from "@components/Input";
 import { SelectPill } from "@components/SelectPill";
-import { SearchablePicker } from "@components/ui/SearchablePicker";
 import { Loader } from "@components/ui/Loader";
+import { LocationAutocomplete } from "@components/ui/LocationAutocomplete";
 
 import { useAuthStore } from "@store/authStore";
 import { useUserStore } from "@store/userStore";
 import { updateProfileMutation } from "@services/mutations";
-import { useLocationPicker } from "@hooks/useLocationPicker";
 import { editProfileSchema, EditProfileForm } from "@/validations/profileValidation";
 import { CREATOR_ROLES } from "@constants";
-import type { SocialMediaLinks, ProfileUpdatePayload, ApiError, UserProfile } from "@/types/auth";
+import type { SocialMediaLinks, ProfileUpdatePayload, ApiError, UserProfile, PickedLocation } from "@/types/auth";
 import { useLogout } from "@hooks/useLogout";
+import { useGlobalStore } from "@/store/globalStore";
 
 const SPEC_OPTIONS = ["Wedding", "Fashion", "Commercial", "Portrait", "Events", "Product"];
 
@@ -36,16 +36,17 @@ export default function EditProfile() {
   const authUser = useAuthStore(s => s.user);
   const userData = useUserStore(s => s.userData);
   const setUserData = useUserStore(s => s.setUserData);
+  const { showToast } = useGlobalStore();
 
   const profile = userData?.user;
 
-  // Split address string "city, state, country" into parts safely
-  const addressParts = (profile?.address || "").split(",").map((s: string) => s.trim());
-  let initCity = "", initState = "", initCountry = "";
-  if (addressParts.length >= 3) {
-    const [city, state, country] = addressParts;
-    initCity = city; initState = state; initCountry = country;
-  }
+  const initPickedLoc: PickedLocation | null = profile?.location?.coordinates && profile.location.coordinates[0] !== 0 ? {
+    lat: profile.location.coordinates[1],
+    lng: profile.location.coordinates[0],
+    place: profile.location.place || ""
+  } : null;
+
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(initPickedLoc);
 
   const { control, handleSubmit, watch, setValue, formState: { errors } } = useForm<EditProfileForm>({
     resolver: zodResolver(editProfileSchema),
@@ -55,9 +56,6 @@ export default function EditProfile() {
       mobile: (profile?.mobile || authUser?.mobile || "").replace(/^\+91\s*/, ""),
       bio: profile?.specialization || "",
       yearsOfExperience: profile?.yearsOfExperience?.toString() || "",
-      country: initCountry || "",
-      state: initState || "",
-      city: initCity || "",
       categories: (profile?.role as string[]) || [],
       instagram: profile?.socialMediaLinks?.instagram || "",
       youtube: profile?.socialMediaLinks?.youtube || "",
@@ -66,14 +64,9 @@ export default function EditProfile() {
     }
   });
 
-  const selectedCountry = watch("country");
-  const selectedState = watch("state");
   const selectedCategories = watch("categories") || [];
   const watchedBio = watch("bio") || "";
   const currentSpecs = watchedBio ? watchedBio.split(",").map((s: string) => s.trim()).filter(Boolean) : [];
-
-  const { countryItems, stateItems, cityItems, countriesLoading, statesLoading, citiesLoading } =
-    useLocationPicker(selectedCountry || "", selectedState || "");
 
   const toggleCategory = (cat: string) => {
     if (!isEditing) return;
@@ -104,7 +97,6 @@ export default function EditProfile() {
 
   const updateMutation = useMutation({
     mutationFn: (data: EditProfileForm) => {
-      const addressString = [data.city, data.state, data.country].filter(Boolean).join(", ");
       const finalMobile = data.mobile ? "+91" + data.mobile.trim() : undefined;
 
       const socialMediaLinks: SocialMediaLinks = {};
@@ -115,21 +107,25 @@ export default function EditProfile() {
 
       const payload: ProfileUpdatePayload = {
         fullName: data.fullName,
+        signUpType: authUser?.signUpType || "email",
         email: data.email,
         mobile: finalMobile,
         yearsOfExperience: data.yearsOfExperience ? parseInt(data.yearsOfExperience) : 0,
         ...(data.bio?.trim() ? { specialization: data.bio.trim() } : {}),
-        ...(addressString ? { address: addressString } : {}),
-        ...(data.state ? { state: data.state } : {}),
-        ...(data.city ? { city: data.city } : {}),
         role: data.categories || [],
         ...(Object.keys(socialMediaLinks).length > 0 ? { socialMediaLinks } : {}),
+        profilePicture: profile?.profilePicture || authUser?.profileImage || (profile as any)?.profile_picture || "",
+        category: "single",
+        location: {
+          type: "Point",
+          place: pickedLocation?.place || "",
+          coordinates: pickedLocation ? [pickedLocation.lng, pickedLocation.lat] : [0, 0]
+        },
       };
 
       return updateProfileMutation(payload);
     },
     onSuccess: (_, variables) => {
-      const addressString = [variables.city, variables.state, variables.country].filter(Boolean).join(", ");
       const finalMobile = variables.mobile ? "+91" + variables.mobile.trim() : profile?.mobile;
       const updatedProfile: UserProfile = {
         ...(profile || { _id: "" }),
@@ -138,7 +134,11 @@ export default function EditProfile() {
         mobile: finalMobile,
         specialization: variables.bio,
         yearsOfExperience: variables.yearsOfExperience ? parseInt(variables.yearsOfExperience) : undefined,
-        address: addressString,
+        location: {
+          type: "Point",
+          place: pickedLocation?.place || "",
+          coordinates: pickedLocation ? [pickedLocation.lng, pickedLocation.lat] : [0, 0]
+        },
         role: variables.categories,
         socialMediaLinks: {
           instagram: variables.instagram,
@@ -149,6 +149,7 @@ export default function EditProfile() {
       };
       setUserData(updatedProfile, userData?.subscription);
       setIsEditing(false);
+      showToast("Profile details saved successfully!", "success");
     },
     onError: (err: ApiError) => {
       Alert.alert("Error", err.message || "Failed to save profile updates.");
@@ -227,14 +228,16 @@ export default function EditProfile() {
                   <Input variant="light" placeholder="e.g. 5" value={value} editable={isEditing} onChangeText={onChange} keyboardType="numeric" error={errors.yearsOfExperience?.message} />
                 )} />
               </View>
-              <View className="mb-4">
-                <SearchablePicker variant="light" label="Country" placeholder="Select Country" items={countryItems} value={selectedCountry || null} onValueChange={(val) => { if (!isEditing) return; setValue("country", val || "", { shouldValidate: true }); setValue("state", "", { shouldValidate: true }); setValue("city", "", { shouldValidate: true }); }} error={errors.country?.message} disabled={!isEditing || countriesLoading} />
-              </View>
-              <View className="mb-4">
-                <SearchablePicker variant="light" label="State" placeholder={selectedCountry ? "Select State" : "Select a country first"} items={stateItems} value={selectedState || null} onValueChange={(val) => { if (!isEditing) return; setValue("state", val || "", { shouldValidate: true }); setValue("city", "", { shouldValidate: true }); }} disabled={!isEditing || !selectedCountry || statesLoading} error={errors.state?.message} />
-              </View>
-              <View className="mb-4">
-                <SearchablePicker variant="light" label="City" placeholder={selectedState ? "Select City" : "Select a state first"} items={cityItems} value={watch("city") || null} onValueChange={(val) => { if (!isEditing) return; setValue("city", val || "", { shouldValidate: true }); }} disabled={!isEditing || !selectedState || citiesLoading} error={errors.city?.message} />
+              <View className="mb-4 z-50">
+                <LocationAutocomplete 
+                  variant="light" 
+                  value={pickedLocation} 
+                  onSelect={setPickedLocation} 
+                  onClear={() => setPickedLocation(null)}
+                  disabled={!isEditing} 
+                  label="Location"
+                  placeholder="Set your location"
+                />
               </View>
             </CollapsibleSection>
 
@@ -271,10 +274,6 @@ export default function EditProfile() {
             </CollapsibleSection>
 
             <View className="mt-8 mb-4 border-t border-slate-200/60 pt-8" />
-            <TouchableOpacity activeOpacity={0.8} onPress={() => Alert.alert("Logout", "Are you sure you want to log out?", [{ text: "Cancel", style: "cancel" }, { text: "Logout", style: "destructive", onPress: handleLogout }])} className="flex-row items-center justify-center py-4 rounded-xl bg-red-50 border border-red-100 mb-10">
-              <LogOut size={18} color="#EF4444" className="mr-2" />
-              <Text className="font-outfit-bold text-red-500 text-base mt-0.5">Log Out</Text>
-            </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

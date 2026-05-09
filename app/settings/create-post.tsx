@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { View, Text, Switch, TouchableOpacity, Image, Dimensions, Platform } from "react-native";
+import { View, Text, Switch, TouchableOpacity, Image, Dimensions, Platform, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from "expo-video";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowLeft, ImagePlus } from "lucide-react-native";
 import { Input } from "@components/Input";
+import Button from "@components/Button";
 import { usePortfolioUpload } from "@hooks/usePortfolioUpload";
 import { Loader } from "@components/ui/Loader";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import Toast from 'react-native-toast-message';
+import { useGlobalStore } from "@/store/globalStore";
 
 const AVAILABLE_TAGS = ["Wedding", "Portrait", "Fashion", "Commercial", "Event", "Product", "Nature"];
 
@@ -42,6 +43,7 @@ export default function CreatePostScreen() {
   const [coverMimeType, setCoverMimeType] = useState<string | null>(null);
 
   const { startUpload } = usePortfolioUpload();
+  const { showToast } = useGlobalStore();
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -52,8 +54,7 @@ export default function CreatePostScreen() {
   const pickCoverImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsEditing: false,
       quality: 0.8,
     });
 
@@ -86,12 +87,12 @@ export default function CreatePostScreen() {
         coverMimeType: coverMimeType || undefined,
       });
 
-      Toast.show({ type: 'success', text1: 'Upload started', text2: 'Your post is uploading in the background.' });
+      showToast("Upload started. Your post is uploading in the background.", "success");
       router.back();
     } catch (error: any) {
       const msg = error?.message || 'Something went wrong. Please try again.';
       setErrorMessage(msg);
-      Toast.show({ type: 'error', text1: 'Upload Failed', text2: msg });
+      showToast(msg, "error");
       setIsSubmitting(false);
     }
   };
@@ -107,16 +108,8 @@ export default function CreatePostScreen() {
         <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 items-center justify-center -ml-2" disabled={isSubmitting}>
           <ArrowLeft size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text className="font-outfit-bold text-white text-lg">New Post</Text>
-        <TouchableOpacity onPress={handlePost} disabled={!isFormValid || isSubmitting}>
-          {isSubmitting ? (
-            <Loader />
-          ) : (
-            <Text className={`font-outfit-bold text-lg ${isFormValid ? "text-[#0EA5E9]" : "text-white/30"}`}>
-              Post
-            </Text>
-          )}
-        </TouchableOpacity>
+        <Text className="font-outfit-bold text-white text-lg ml-6">New Post</Text>
+        <View className="w-10 h-10" />
       </View>
 
       <KeyboardAwareScrollView
@@ -156,8 +149,8 @@ export default function CreatePostScreen() {
             ) : (
               <Image
                 source={{ uri: mediaUri }}
-                style={{ width: "100%", aspectRatio: 1, borderRadius: 12 }}
-                resizeMode="cover"
+                style={{ width: "100%", height: 350, borderRadius: 12, backgroundColor: "#0F172A" }}
+                resizeMode="contain"
               />
             )
           ) : (
@@ -232,6 +225,14 @@ export default function CreatePostScreen() {
           />
         </View>
       </KeyboardAwareScrollView>
+      <View className="p-5 border-t border-white/5">
+        <Button
+          title={isSubmitting ? "Posting..." : "Publish Post"}
+          onPress={handlePost}
+          disabled={!isFormValid || isSubmitting}
+          loading={isSubmitting}
+        />
+      </View>
     </SafeAreaView>
   );
 }

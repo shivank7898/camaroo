@@ -8,14 +8,10 @@ const socialLinksSchema = {
   other: z.string().optional().or(z.literal("")),
 };
 
-// Onboarding Details Schema
 export const getOnboardingDetailsSchema = (isMobileSignup: boolean) => z.object({
   fullName: z.string().min(2, "Full Name is required"),
   email: isMobileSignup ? z.string().email("Invalid email address") : z.string().optional().or(z.literal("")),
   mobile: !isMobileSignup ? z.string().min(10, "Invalid mobile number") : z.string().optional().or(z.literal("")),
-  country: z.string().min(1, "Country is required"),
-  state: z.string().min(1, "State is required"),
-  city: z.string().min(1, "City is required"),
   ...socialLinksSchema
 });
 
@@ -26,9 +22,6 @@ export const editProfileSchema = z.object({
   mobile: z.string().min(10, "Invalid mobile number").optional().or(z.literal("")),
   bio: z.string().optional().or(z.literal("")),
   yearsOfExperience: z.string().optional().or(z.literal("")),
-  country: z.string().optional().or(z.literal("")),
-  state: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
   categories: z.array(z.string()).optional(),
   ...socialLinksSchema
 });

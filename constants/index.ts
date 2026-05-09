@@ -13,9 +13,7 @@ export const CREATOR_ROLES = [
   "Photographer",
   "Cinematographer",
   "Videographer",
-  "Editor",
-  "Drone Pilot",
-  "Audio Engineer"
+  "Editor"
 ];
 
 export const SETTINGS_MENU = [
@@ -39,5 +37,12 @@ export const SETTINGS_MENU = [
     title: "Security",
     subtitle: "Change your password",
     route: "/settings/security",
+  },
+  {
+    id: "my-applications",
+    iconName: "briefcase",
+    title: "My Applications",
+    subtitle: "Track your opportunity applications",
+    route: "/settings/my-applications",
   },
 ];

@@ -10,9 +10,11 @@ export interface DateMarker {
 interface CustomCalendarProps {
   markedDates: Record<string, DateMarker>;
   onDayPress: (dateString: string) => void;
-  selectedDate: string | null;
+  selectedDate?: string | null;
+  selectedDates?: string[];
   isLoading?: boolean;
   onMonthChange?: (month: number, year: number) => void;
+  minDate?: string;
 }
 
 const MONTH_NAMES = [
@@ -22,7 +24,7 @@ const MONTH_NAMES = [
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
-export default function CustomCalendar({ markedDates, onDayPress, selectedDate, isLoading, onMonthChange }: CustomCalendarProps) {
+export default function CustomCalendar({ markedDates, onDayPress, selectedDate, selectedDates, isLoading, onMonthChange, minDate }: CustomCalendarProps) {
   const pulseAnim = useRef(new Animated.Value(0.5)).current;
 
   useEffect(() => {
@@ -197,7 +199,7 @@ export default function CustomCalendar({ markedDates, onDayPress, selectedDate, 
                 }
 
                 const dayNumber = parseInt(dateStr.split('-')[2], 10);
-                const isSelected = selectedDate === dateStr;
+                const isSelected = selectedDate === dateStr || selectedDates?.includes(dateStr);
                 const markInfo = markedDates[dateStr];
 
                 // Default styling
@@ -206,18 +208,24 @@ export default function CustomCalendar({ markedDates, onDayPress, selectedDate, 
                 let dotColor = "transparent";
                 
                 const isOccupied = markInfo?.status === "occupied";
+                const isDisabled = minDate ? new Date(dateStr) < new Date(minDate) : false;
 
                 // Apply Marks
                 if (isOccupied) {
-                  containerClass += " bg-[#1E293B]";
+                  containerClass += " bg-[#0EA5E9]";
                   textClass = "font-outfit-bold text-white";
+                }
+
+                if (isDisabled) {
+                  textClass = "font-outfit-medium text-sm text-slate-300";
+                  containerClass += " opacity-30 bg-slate-50";
                 }
 
                 // Apply Selection
                 if (isSelected) {
                   if (isOccupied) {
-                    // Make it stand out if it's both occupied AND selected (e.g., turn blue)
-                    containerClass = containerClass.replace("bg-[#1E293B]", "bg-[#0EA5E9]");
+                    // Make it stand out if it's both occupied AND selected
+                    containerClass += " border-2 border-[#1E293B]";
                   } else {
                     containerClass += " bg-[#F1F5F9]";
                     textClass = "font-outfit-bold text-black";
@@ -229,6 +237,7 @@ export default function CustomCalendar({ markedDates, onDayPress, selectedDate, 
                     <TouchableOpacity 
                       activeOpacity={0.7}
                       onPress={() => onDayPress(dateStr)}
+                      disabled={isDisabled}
                       className={containerClass}
                     >
                       <Text className={textClass}>{dayNumber}</Text>

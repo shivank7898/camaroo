@@ -15,6 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pankajcamaroo.camaroo",
+      "buildNumber": "4",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:camroo-launchpad-881298ae.vercel.app"
@@ -68,12 +69,18 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://camroo-launchpad-881298ae.vercel.app"
+        }
+      ],
       "expo-font",
       "@react-native-google-signin/google-signin",
       "expo-apple-authentication",
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
+      "./plugins/withFirebaseModularHeaders",
       "./plugins/withCleartext",
       "expo-video",
       [

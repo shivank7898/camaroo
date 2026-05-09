@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, TextInput, Image, Platform, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, TextInput, Image, Platform, StyleSheet, Keyboard, ActivityIndicator } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -13,12 +13,11 @@ import { useMutation } from "@tanstack/react-query";
 import { updateProfileMutation } from "@services/mutations";
 import { getOnboardingDetailsSchema, OnboardingDetailsForm } from "@/validations/profileValidation";
 import { useProfileImageUpload } from "@hooks/useProfileImageUpload";
-import type { SocialMediaLinks, ProfileUpdatePayload, ApiError } from "@/types/auth";
+import type { SocialMediaLinks, ProfileUpdatePayload, ApiError, PickedLocation } from "@/types/auth";
 
-import { useLocationPicker } from "@hooks/useLocationPicker";
 import { ProgressRing } from "@components/ui/ProgressRing";
 import { Loader } from "@components/ui/Loader";
-import { SearchablePicker } from "@components/ui/SearchablePicker";
+import { LocationAutocomplete } from "@components/ui/LocationAutocomplete";
 
 export default function OnboardingDetails() {
   const router = useRouter();
@@ -35,7 +34,7 @@ export default function OnboardingDetails() {
       fullName: onboardingData?.fullName || "",
       email: isMobileSignup ? "" : user?.email || "",
       mobile: !isMobileSignup ? "" : (user?.mobile?.replace(/^\+91\s*/, "") || ""),
-      country: "",
+      country: "India",
       state: "",
       city: "",
       instagram: "",
@@ -45,11 +44,7 @@ export default function OnboardingDetails() {
     } as OnboardingDetailsForm
   });
 
-  const selectedCountry = watch("country");
-  const selectedState = watch("state");
-
-  const { countryItems, stateItems, cityItems, countriesLoading, statesLoading, citiesLoading } =
-    useLocationPicker(selectedCountry, selectedState);
+  const [pickedLocation, setPickedLocation] = useState<PickedLocation | null>(null);
 
   const {
     localImageUri,
@@ -81,10 +76,11 @@ export default function OnboardingDetails() {
         category: "single",
         signUpType,
         profilePicture: uploadedUrl || user?.profileImage || "",
-        address: [data.city, data.state, data.country].filter(Boolean).join(", "),
-        state: data.state,
-        city: data.city,
-        location: { type: "Point", coordinates: [0, 0] },
+        location: { 
+          type: "Point", 
+          place: pickedLocation?.place || "",
+          coordinates: pickedLocation ? [pickedLocation.lng, pickedLocation.lat] : [0, 0] 
+        },
         ...(Object.keys(socialMediaLinks).length > 0 ? { socialMediaLinks } : {}),
         ...(signUpType === "mobile"
           ? { email: data.email }
@@ -100,10 +96,8 @@ export default function OnboardingDetails() {
         fullName: variables.fullName,
         email: variables.email,
         mobile: variables.mobile,
-        address: [variables.city, variables.state, variables.country].filter(Boolean).join(", "),
+        pickedLocation: pickedLocation || undefined,
         profilePicture: uploadedUrl || user?.profileImage || undefined,
-        state: variables.state,
-        city: variables.city,
         socialMediaLinks,
       });
       router.push("/onboarding/optional");
@@ -119,6 +113,10 @@ export default function OnboardingDetails() {
     setImageError(null);
     if (!localImageUri && !user?.profileImage) {
       setImageError("Profile image is required.");
+      return;
+    }
+    if (!pickedLocation) {
+      setApiError("Location is required.");
       return;
     }
     patchMandatory(data);
@@ -144,10 +142,11 @@ export default function OnboardingDetails() {
         <KeyboardAwareScrollView
           className="flex-1 px-6 pt-6"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 60 }}
           keyboardShouldPersistTaps="handled"
           enableOnAndroid={true}
-          extraScrollHeight={Platform.OS === 'ios' ? 20 : 60}
+          extraHeight={150}
+          extraScrollHeight={50}
         >
           <Text className="text-3xl font-outfit-bold text-white mb-2">Almost there</Text>
           <Text className="text-base font-outfit text-text-secondary mb-8">
@@ -162,8 +161,8 @@ export default function OnboardingDetails() {
               disabled={isHandlingRequests}
             >
               {isUploading && (
-                <View className="absolute inset-0 z-10 items-center justify-center pointer-events-none bg-black/40">
-                  <ProgressRing progress={uploadProgress} size={96} strokeWidth={3} backgroundColor="transparent" />
+                <View className="absolute inset-0 z-10 items-center justify-center pointer-events-none bg-black/50">
+                  <ActivityIndicator size="large" color="#0EA5E9" />
                 </View>
               )}
               {localImageUri ? (
@@ -193,41 +192,13 @@ export default function OnboardingDetails() {
               )} />
             )}
 
-            <SearchablePicker
-              label="Country *"
-              placeholder="Select Country"
-              items={countryItems}
-              value={selectedCountry || null}
-              onValueChange={(val) => {
-                setValue("country", val || "", { shouldValidate: true });
-                setValue("state", "", { shouldValidate: false });
-                setValue("city", "", { shouldValidate: false });
-              }}
-              error={errors.country?.message as string}
-              disabled={countriesLoading || isHandlingRequests}
-            />
-
-            <SearchablePicker
-              label="State *"
-              placeholder={selectedCountry ? "Select State" : "Select a country first"}
-              items={stateItems}
-              value={selectedState || null}
-              onValueChange={(val) => {
-                setValue("state", val || "", { shouldValidate: true });
-                setValue("city", "", { shouldValidate: false });
-              }}
-              disabled={!selectedCountry || statesLoading || isHandlingRequests}
-              error={errors.state?.message as string}
-            />
-
-            <SearchablePicker
-              label="City *"
-              placeholder={selectedState ? "Select City" : "Select a state first"}
-              items={cityItems}
-              value={watch("city") || null}
-              onValueChange={(val) => setValue("city", val || "", { shouldValidate: true })}
-              disabled={!selectedState || citiesLoading || isHandlingRequests}
-              error={errors.city?.message as string}
+            <LocationAutocomplete 
+              label="Location *"
+              value={pickedLocation}
+              onSelect={setPickedLocation}
+              onClear={() => setPickedLocation(null)}
+              variant="dark"
+              disabled={isHandlingRequests}
             />
 
             <View className="mt-4">
@@ -272,15 +243,16 @@ export default function OnboardingDetails() {
               </View>
             </View>
           </View>
-        </KeyboardAwareScrollView>
+          </KeyboardAwareScrollView>
 
-        <View className="p-6 pt-4 border-t border-white/5 bg-[#060D1A]/80">
+        {/* Footer */}
+        <View className="px-6 pb-6 pt-2 border-t border-white/5 bg-[#060D1A]">
           {apiError && (
             <Text className="text-red-500 font-outfit-medium text-left mb-3">{apiError}</Text>
           )}
-          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit(onSubmit)} disabled={isHandlingRequests}>
+          <TouchableOpacity activeOpacity={0.85} onPress={handleSubmit(onSubmit)} disabled={isHandlingRequests || isUploading} style={{ opacity: isHandlingRequests || isUploading ? 0.5 : 1 }}>
             <LinearGradient colors={["#6A11CB", "#2575FC"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.submitGradient}>
-              {isHandlingRequests ? <Loader /> : <Text className="font-outfit-bold text-white text-lg">Continue</Text>}
+              {patchPending ? <Loader /> : <Text className="font-outfit-bold text-white text-lg">Continue</Text>}
             </LinearGradient>
           </TouchableOpacity>
         </View>

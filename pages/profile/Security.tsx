@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Platform, Alert } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { ArrowLeft, ShieldCheck, Eye, EyeOff } from "lucide-react-native";
@@ -71,8 +72,14 @@ export default function SecuritySettings() {
           </View>
         </View>
 
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-          <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="flex-1 px-5 pt-6 pb-6" showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView 
+          className="flex-1 px-5 pt-6 pb-6" 
+          contentContainerStyle={{ flexGrow: 1 }} 
+          showsVerticalScrollIndicator={false} 
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={Platform.OS === 'ios' ? 20 : 60}
+        >
             <View className="flex-1">
               <View className="items-start mb-8">
                 <Text className="font-outfit-bold text-2xl text-black mb-2">
@@ -158,25 +165,25 @@ export default function SecuritySettings() {
                 />
               </View>
             </View>
+          </KeyboardAwareScrollView>
 
-            <View className="pb-8 pt-4">
-              {(apiError || successMessage) ? (
-                <View className="mb-4">
-                  <Text className={`${apiError ? "text-red-500" : "text-green-500"} font-outfit-medium text-left`}>
-                    {apiError || successMessage}
-                  </Text>
-                </View>
-              ) : null}
-
-              <Button 
-                title="Update Password" 
-                loading={isSaving}
-                onPress={handleSubmit(onSubmit)} 
-                disabled={isSaving} 
-              />
+        {/* Fixed footer - Outside KAV so it stays pinned on iOS */}
+        <View className="px-5 pb-8 pt-4 bg-white border-t border-slate-100">
+          {(apiError || successMessage) ? (
+            <View className="mb-4">
+              <Text className={`${apiError ? "text-red-500" : "text-green-500"} font-outfit-medium text-left`}>
+                {apiError || successMessage}
+              </Text>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          ) : null}
+
+          <Button 
+            title="Update Password" 
+            loading={isSaving}
+            onPress={handleSubmit(onSubmit)} 
+            disabled={isSaving} 
+          />
+        </View>
       </SafeAreaView>
     </View>
   );

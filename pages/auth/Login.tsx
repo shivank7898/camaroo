@@ -115,12 +115,7 @@ export default function Login() {
 
   return (
     <AuthCardLayout>
-      <TouchableOpacity
-        className="mt-4 ml-6 self-start p-3 rounded-full bg-white/10 border border-white/20"
-        onPress={() => router.back()}
-      >
-        <ArrowLeft size={22} color="#FFFFFF" />
-      </TouchableOpacity>
+      <View className="h-4" />
 
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 40 }}

@@ -32,7 +32,7 @@ function SocialIconsRow({ email, phone, instagram, youtube, website }: SocialIco
   }, []);
 
   return (
-    <View className="flex-row items-center px-5 mt-4 gap-3">
+    <View className="flex-row items-center gap-3">
       {email && (
         <TouchableOpacity
           onPress={() => handleLink(`mailto:${email}`)}

@@ -1,12 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, Image, Share, ScrollView, Animated, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, Share, ScrollView, Animated, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
 import Head from 'expo-router/head';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import Toast from 'react-native-toast-message';
 
 import { getPortfolioByIdQuery } from '@services/queries';
 import { likePortfolioPostMutation, unlikePortfolioPostMutation } from '@services/mutations';
@@ -14,10 +13,30 @@ import type { PortfolioPost } from '@/types/portfolio';
 
 // Local Video Player Mirroring the Modal Player
 function PostVideoPlayer({ uri }: { uri: string }) {
+  const [hasPlayed, setHasPlayed] = useState(false);
   const player = useVideoPlayer(uri, player => {
     player.loop = true;
     player.play();
   });
+
+  React.useEffect(() => {
+    let interval = setInterval(() => {
+      if (player.playing || player.currentTime > 0) {
+        setHasPlayed(true);
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, [player]);
+
+  // Cleanup: release player on unmount to prevent OOM
+  React.useEffect(() => {
+    return () => {
+      try {
+        player.pause();
+      } catch (_) {}
+    };
+  }, [player]);
 
   const feedbackOpacity = useRef(new Animated.Value(0)).current;
   const [showPlay, setShowPlay] = useState(false);
@@ -55,6 +74,11 @@ function PostVideoPlayer({ uri }: { uri: string }) {
         contentFit="contain"
         nativeControls={false}
       />
+      {!hasPlayed && (
+        <View className="absolute inset-0 flex-1 items-center justify-center bg-[#0F172A] z-10 w-full h-full" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0}}>
+           <ActivityIndicator size="large" color="#94A3B8" />
+        </View>
+      )}
       <View style={{ ...StyleSheet.absoluteFillObject, flexDirection: "row" }} collapsable={false}>
         <TouchableOpacity activeOpacity={1} onPress={handlePress} onLongPress={seekBackward} delayLongPress={500} style={{ flex: 1 }} />
         <TouchableOpacity activeOpacity={1} onPress={handlePress} onLongPress={seekForward} delayLongPress={500} style={{ flex: 1 }} />
@@ -123,9 +147,13 @@ export default function PortfolioDetailScreen() {
       const currentCache: any = queryClient.getQueryData(["portfolio", id]);
       if (currentCache) {
         if (currentCache.likedByMe) {
-          likePost({ portfolioId: post._id });
+          likePost({ portfolioId: post._id }, {
+            onError: (e: any) => Alert.alert("Like failed", e.message)
+          });
         } else {
-          unlikePost({ portfolioId: post._id });
+          unlikePost({ portfolioId: post._id }, {
+            onError: (e: any) => Alert.alert("Unlike failed", e.message)
+          });
         }
       }
     }, 800);
@@ -220,14 +248,14 @@ export default function PortfolioDetailScreen() {
             </View>
 
             {/* Full edge-to-edge Image/Video */}
-            <View className="w-full bg-slate-900 items-center justify-center">
+            <View className="w-full bg-slate-900 items-center justify-center" style={{ height: 400 }}>
               {post.mediaUrls?.mediaType === "video" ? (
                 <PostVideoPlayer uri={post.mediaUrls?.url || ""} />
               ) : (
                 <Image
                   source={{ uri: imageUrl }}
-                  style={{ width: "100%", aspectRatio: 1 }}
-                  resizeMode="cover"
+                  style={{ width: "100%", height: "100%" }}
+                  resizeMode="contain"
                 />
               )}
             </View>

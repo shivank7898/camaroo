@@ -1,6 +1,13 @@
 import { apiRequest } from "./api";
 import type { ApiResponse, AuthData, ProfileUpdatePayload, ForgotPasswordForm, ResetPasswordForm, ChangePasswordForm, UpdateAvailabilityPayload } from "@/types/auth";
 import type { UpdatePortfolioPayload, UpdatePortfolioStatusPayload } from "@/types/portfolio";
+import type {
+  CreateOpportunityPayload,
+  ApplyToOpportunityPayload,
+  ReviewApplicationPayload,
+  Opportunity,
+  OpportunityApplication,
+} from "@/types/opportunity";
 
 // Re-export types for convenience
 export type { ApiResponse, AuthData };
@@ -120,7 +127,7 @@ export const createPortfolioPostMutation = async (payload: {
   tags: string[];
   visibility: "public" | "private";
 }) => {
-  const response = await apiRequest<ApiResponse<any>>({
+  const response = await apiRequest<ApiResponse<unknown>>({
     url: "/portfolio",
     method: "POST",
     payload,
@@ -135,7 +142,7 @@ export const updatePortfolioMutation = async ({
   id: string;
   payload: UpdatePortfolioPayload;
 }) => {
-  const response = await apiRequest<ApiResponse<any>>({
+  const response = await apiRequest<ApiResponse<unknown>>({
     url: `/portfolio/${id}`,
     method: "PATCH",
     payload,
@@ -150,7 +157,7 @@ export const updatePortfolioStatusMutation = async ({
   id: string;
   payload: UpdatePortfolioStatusPayload;
 }) => {
-  const response = await apiRequest<ApiResponse<any>>({
+  const response = await apiRequest<ApiResponse<unknown>>({
     url: `/portfolio/${id}/status`,
     method: "PATCH",
     payload,
@@ -163,7 +170,7 @@ export const updatePortfolioStatusMutation = async ({
 // ==========================================
 
 export const likePortfolioPostMutation = async (params: { portfolioId: string }) => {
-  const response = await apiRequest<ApiResponse<any>>({
+  const response = await apiRequest<ApiResponse<unknown>>({
     url: `/portfolio-engagement/likes`,
     method: "POST",
     payload: params,
@@ -172,10 +179,97 @@ export const likePortfolioPostMutation = async (params: { portfolioId: string })
 };
 
 export const unlikePortfolioPostMutation = async (params: { portfolioId: string }) => {
-  const response = await apiRequest<ApiResponse<any>>({
+  const response = await apiRequest<ApiResponse<unknown>>({
     url: `/portfolio-engagement/likes/portfolio/${params.portfolioId}`,
     method: "DELETE",
     payload: params,
   });
   return response?.data;
+};
+
+export const subscribeUserMutation = async (payload: { userId: string }) => {
+  const response = await apiRequest<ApiResponse<unknown>>({
+    url: `/portfolio-engagement/subscribe`,
+    method: "POST",
+    payload,
+  });
+  return response?.data;
+};
+
+export const unsubscribeUserMutation = async (userId: string) => {
+  const response = await apiRequest<ApiResponse<unknown>>({
+    url: `/portfolio-engagement/unsubscribe/${userId}`,
+    method: "DELETE",
+  });
+  return response?.data;
+};
+
+// ==========================================
+// OPPORTUNITY MUTATIONS
+// ==========================================
+
+export const createOpportunityMutation = async (payload: CreateOpportunityPayload) => {
+  const response = await apiRequest<ApiResponse<Opportunity>>({
+    url: "/opportunity",
+    method: "POST",
+    payload,
+  });
+  return response?.data;
+};
+
+export const cancelOpportunityMutation = async (id: string) => {
+  const response = await apiRequest<ApiResponse<unknown>>({
+    url: `/opportunity/${id}/cancel`,
+    method: "PATCH",
+  });
+  return response?.data;
+};
+
+// ==========================================
+// APPLICATION MUTATIONS
+// ==========================================
+
+export const applyToOpportunityMutation = async (payload: ApplyToOpportunityPayload) => {
+  const response = await apiRequest<ApiResponse<OpportunityApplication>>({
+    url: "/application",
+    method: "POST",
+    payload,
+  });
+  return response?.data;
+};
+
+export const cancelApplicationMutation = async (id: string) => {
+  const response = await apiRequest<ApiResponse<unknown>>({
+    url: `/application/${id}/cancel`,
+    method: "PATCH",
+  });
+  return response?.data;
+};
+
+export const reviewApplicationMutation = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: ReviewApplicationPayload;
+}) => {
+  const response = await apiRequest<ApiResponse<OpportunityApplication>>({
+    url: `/application/${id}/review`,
+    method: "PATCH",
+    payload,
+  });
+  return response?.data;
+};
+
+// ==========================================
+// CHAT MUTATIONS
+// ==========================================
+
+export const createConversationMutation = async (participantId: string) => {
+  const response = await apiRequest<any>({
+    url: "/socket-chat/conversations",
+    method: "POST",
+    payload: { participantId },
+  });
+  return response?.data || response;
 };

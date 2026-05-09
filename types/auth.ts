@@ -53,7 +53,7 @@ export interface OptionalForm {
 }
 
 export interface UpdateAvailabilityPayload {
-  date: string;
+  date: string | string[];
   message: string;
 }
 
@@ -113,6 +113,19 @@ export interface Subscription {
   usage?: unknown[];
 }
 
+export interface PickedLocation {
+  lat: number;
+  lng: number;
+  place: string; // address string → sent as location.place
+}
+
+export interface LocationSuggestion {
+  placeId: string;
+  description: string;
+  lat: number;
+  lng: number;
+}
+
 export interface UserProfile {
   _id: string;
   fullName?: string;
@@ -125,6 +138,7 @@ export interface UserProfile {
   city?: string;
   location?: {
     type: string;
+    place?: string;
     coordinates: number[];
   };
   category?: string;
@@ -136,6 +150,8 @@ export interface UserProfile {
   signUpType?: string;
   createdAt?: string;
   updatedAt?: string;
+  subscriberCount?: number;
+  isSubscribed?: boolean;
   [key: string]: unknown;
 }
 
@@ -148,9 +164,7 @@ export interface OnboardingData {
   email?: string;
   mobile?: string;
   role?: string[];
-  address?: string;
-  state?: string;
-  city?: string;
+  pickedLocation?: PickedLocation;
   profilePicture?: string;
   socialMediaLinks?: SocialMediaLinks;
 }
@@ -171,6 +185,7 @@ export interface ProfileUpdatePayload {
   city?: string;
   location?: {
     type: string;
+    place?: string;
     coordinates: number[];
   };
   socialMediaLinks?: SocialMediaLinks;

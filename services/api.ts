@@ -97,7 +97,7 @@ export const apiRequest = async <T extends object>({
 
     if (axiosError.response?.status === 401) {
       handleLogout();
-    } 
+    }
 
     if (error.response?.data) {
       const serverMessage = error.response.data.message || error.response.data.error || "An API error occurred";

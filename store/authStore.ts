@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { OnboardingData } from "@/types/auth";
 
 interface User {
@@ -48,26 +50,41 @@ interface AuthStore {
 
 /**
  * useAuthStore
- * Authentication session store.
+ * Authentication session store with AsyncStorage persistence.
+ *
+ * Session survives app restarts. Only cleared when:
+ * - User explicitly logs out
+ * - Backend returns 401 (handled by api.ts interceptor)
  *
  * Usage (always use selectors):
  *   const user = useAuthStore(s => s.user);
  *   const logout = useAuthStore(s => s.logout);
- *
- * Token is automatically available to services/api.ts via authHeaders()
  */
-export const useAuthStore = create<AuthStore>((set) => ({
-  user: null,
-  token: null,
-  onboardingData: {},
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: null,
+      onboardingData: {},
 
-  setAuth: (user, token) => set({ user, token }),
-  logout: () => set({ user: null, token: null, onboardingData: {} }),
-  updateUser: (userData) => 
-    set((state) => ({
-      user: state.user ? { ...state.user, ...userData } : null
-    })),
-  setOnboardingData: (data) =>
-    set((state) => ({ onboardingData: { ...state.onboardingData, ...data } })),
-  clearOnboardingData: () => set({ onboardingData: {} }),
-}));
+      setAuth: (user, token) => set({ user, token }),
+      logout: () => set({ user: null, token: null, onboardingData: {} }),
+      updateUser: (userData) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...userData } : null,
+        })),
+      setOnboardingData: (data) =>
+        set((state) => ({ onboardingData: { ...state.onboardingData, ...data } })),
+      clearOnboardingData: () => set({ onboardingData: {} }),
+    }),
+    {
+      name: "camaroo-auth-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+      // Only persist user & token, not transient onboardingData
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+      }),
+    }
+  )
+);
