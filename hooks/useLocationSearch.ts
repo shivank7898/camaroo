@@ -2,33 +2,37 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as Location from "expo-location";
 import { useDebounce } from "./useDebounce";
-import { searchLocationSuggestions, reverseGeocodeLocation } from "@/services/location";
+import { searchLocationSuggestions, reverseGeocodeLocation, getPlaceCoordinates } from "@/services/location";
 import { useGlobalStore } from "@/store/globalStore";
 import type { LocationSuggestion, PickedLocation } from "@/types/auth";
 
-export function useLocationSearch(
-  onSelect: (loc: PickedLocation) => void,
-  onClear?: () => void
-) {
+export const useLocationSearch = (value: PickedLocation | null, onSelect: (loc: PickedLocation) => void, onClear?: () => void) => {
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebounce(query, 300);
   const [isLoadingGPS, setIsLoadingGPS] = useState(false);
   const { showToast } = useGlobalStore();
 
   const { data: suggestions = [], isFetching: isSearching } = useQuery({
-    queryKey: ["locationSuggestions", debouncedQuery],
+    queryKey: ["locationSearch", debouncedQuery],
+    enabled: debouncedQuery.length >= 3 && !value,
     queryFn: async () => {
-      if (debouncedQuery.length < 3) return [];
+      if (debouncedQuery.length < 3 || value) return [];
       try {
         const response = await searchLocationSuggestions(debouncedQuery);
-        // Assuming response is { data: [...] } based on apiRequest
-        return response?.data || [];
+        if (response?.data?.predictions && Array.isArray(response.data.predictions)) {
+          return response.data.predictions.map((p: any) => ({
+            placeId: p.place_id,
+            description: p.description,
+            lat: 0, // Not provided by autocomplete API, needs Details API call if required
+            lng: 0,
+          }));
+        }
+        return [];
       } catch (error) {
         console.error("Error fetching location suggestions", error);
         return [];
       }
     },
-    enabled: debouncedQuery.length >= 3,
   });
 
   const getCurrentLocation = useCallback(async () => {
@@ -64,15 +68,26 @@ export function useLocationSearch(
     }
   }, [onSelect, showToast]);
 
-  const selectSuggestion = useCallback((suggestion: LocationSuggestion) => {
-    const pickedLoc: PickedLocation = {
-      lat: suggestion.lat || 0, // Should be populated by the API, fallback to 0
-      lng: suggestion.lng || 0,
-      place: suggestion.description
-    };
-    onSelect(pickedLoc);
-    setQuery("");
-  }, [onSelect]);
+  const selectSuggestion = useCallback(async (suggestion: LocationSuggestion) => {
+    try {
+      setIsLoadingGPS(true);
+      const coordsRes = await getPlaceCoordinates(suggestion.placeId);
+      const location = coordsRes?.data?.result?.geometry?.location || { lat: 0, lng: 0 };
+      
+      const pickedLoc: PickedLocation = {
+        lat: location.lat,
+        lng: location.lng,
+        place: suggestion.description
+      };
+      onSelect(pickedLoc);
+      setQuery(suggestion.description);
+    } catch (err) {
+      console.error("Error fetching place coordinates", err);
+      showToast("Could not fetch location coordinates", "error");
+    } finally {
+      setIsLoadingGPS(false);
+    }
+  }, [onSelect, showToast]);
 
   const clearSelection = useCallback(() => {
     setQuery("");

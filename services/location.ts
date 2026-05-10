@@ -28,3 +28,7 @@ export const searchLocationSuggestions = async (query: string): Promise<any> => 
 export const reverseGeocodeLocation = async (lat: number, lng: number): Promise<any> => {
   return await apiRequest<any>({ url: `/user/place?lat=${lat}&lng=${lng}`, method: "GET" });
 };
+
+export const getPlaceCoordinates = async (placeId: string): Promise<any> => {
+  return await apiRequest<any>({ url: `/user/coordinates?query=${placeId}`, method: "GET" });
+};

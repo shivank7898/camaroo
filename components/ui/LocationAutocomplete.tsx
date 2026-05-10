@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Keyboard } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Keyboard } from "react-native";
 import { MapPin, X } from "lucide-react-native";
 import { useLocationSearch } from "@/hooks/useLocationSearch";
 import type { PickedLocation, LocationSuggestion } from "@/types/auth";
@@ -37,7 +37,7 @@ function LocationAutocompleteComponent({
     selectSuggestion,
     clearSelection,
     getCurrentLocation,
-  } = useLocationSearch(onSelect, onClear);
+  } = useLocationSearch(value, onSelect, onClear);
 
   const handleClear = useCallback(() => {
     if (value) {
@@ -115,9 +115,12 @@ function LocationAutocompleteComponent({
           placeholder={value ? "" : placeholder}
           value={value ? value.place : query}
           onChangeText={(text) => {
-            if (!value) setQuery(text);
+            if (value) {
+              if (onClear) onClear();
+            }
+            setQuery(text);
           }}
-          editable={!disabled && value === null}
+          editable={!disabled}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
         />
@@ -136,14 +139,13 @@ function LocationAutocompleteComponent({
                <ActivityIndicator size="small" color="#0EA5E9" />
              </View>
           ) : suggestions.length > 0 ? (
-            <FlatList
-              data={suggestions.slice(0, 5)}
-              keyExtractor={(item) => item.placeId}
-              renderItem={renderSuggestion}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              style={{ maxHeight: 250 }}
-            />
+            <View>
+              {suggestions.slice(0, 5).map((item: LocationSuggestion) => (
+                <React.Fragment key={item.placeId}>
+                  {renderSuggestion({ item })}
+                </React.Fragment>
+              ))}
+            </View>
           ) : (
              <View className="py-6 items-center justify-center">
                 <Text className={`font-outfit ${isLight ? 'text-slate-500' : 'text-white/60'}`}>No locations found</Text>
