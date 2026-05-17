@@ -45,4 +45,11 @@ export const SETTINGS_MENU = [
     subtitle: "Track your opportunity applications",
     route: "/settings/my-applications",
   },
+  {
+    id: "marketplace",
+    iconName: "briefcase",
+    title: "Marketplace Gear",
+    subtitle: "Manage your gear listings",
+    route: "/settings/marketplace",
+  },
 ];

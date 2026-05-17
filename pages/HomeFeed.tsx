@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Image, FlatList, ActivityIndicator, type ViewToken, DeviceEventEmitter } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, FlatList, ActivityIndicator, type ViewToken, DeviceEventEmitter, TextInput } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, Search, Hammer } from "lucide-react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -11,6 +11,7 @@ import TopGradientFade from "@components/ui/TopGradientFade";
 import DiscoveryCard from "@components/feed/DiscoveryCard";
 import { PortfolioCard } from "@/components/portfolio/PortfolioCard";
 import type { OpportunityFilters } from "@/types/opportunity";
+import MarketplaceItemCard from "@/components/feed/MarketplaceItemCard";
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchMe, getUserPortfolioQuery, searchUsersQuery } from "@services/queries";
@@ -169,7 +170,7 @@ export default function HomeFeed({ mode = "portfolio" }: { mode?: "portfolio" | 
 
       {/* Section title */}
       <Text className="px-5 font-outfit-bold text-lg text-black mb-4">
-        {mode === "portfolio" ? "Feed Activity" : "Coming Soon"}
+        {mode === "portfolio" ? "Feed Activity" : "Gear Market"}
       </Text>
     </View>
   ), [mode, discoveryProfiles, renderDiscoveryItem]);
@@ -252,18 +253,72 @@ export default function HomeFeed({ mode = "portfolio" }: { mode?: "portfolio" | 
             />
           )
         ) : (
-          <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: (insets.bottom || 0) + 120 }}>
-            <ListHeader />
-            <View className="items-center justify-center py-10 mt-8 px-10">
-              <View className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl items-center justify-center mb-6 shadow-sm">
-                <Hammer size={32} color="#0EA5E9" />
+          <FlatList
+            ref={scrollRef}
+            data={[
+              { id: "1", title: "Canon EOS R5", price: "₹3000/ day", location: "Mumbai", thumbnail: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=400&h=300" },
+              { id: "2", title: "Sony A7 IV", price: "₹2500/ day", location: "Delhi", thumbnail: "https://images.unsplash.com/photo-1616423640778-28d1b53229bd?auto=format&fit=crop&q=80&w=400&h=300" },
+              { id: "3", title: "DJI Mavic 3", price: "₹4500/ day", location: "Bangalore", thumbnail: "https://images.unsplash.com/photo-1579829366248-204fe8413f31?auto=format&fit=crop&q=80&w=400&h=300" },
+              { id: "4", title: "Red Komodo 6K", price: "₹9000/ day", location: "Mumbai", thumbnail: "https://images.unsplash.com/photo-1589806086701-a18d1ebae51d?auto=format&fit=crop&q=80&w=400&h=300" }
+            ]}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            removeClippedSubviews
+            initialNumToRender={4}
+            columnWrapperStyle={{ justifyContent: "space-between", paddingHorizontal: 20 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: (insets.bottom || 0) + 120, paddingTop: 10 }}
+            ListHeaderComponent={
+              <View>
+                <ListHeader />
+                {/* Advanced Search / Filters Row mapping to API */}
+                <View className="px-5 mb-4 mt-2">
+                  <View className="flex-row items-center bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-4">
+                    <Search size={18} color="#94A3B8" style={{marginRight: 8}} />
+                    <TextInput 
+                      placeholder="Search gear, categories, models..." 
+                      className="flex-1 font-outfit text-slate-800 p-0 m-0" 
+                      placeholderTextColor="#94A3B8" 
+                    />
+                  </View>
+                  
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row overflow-visible">
+                    <TouchableOpacity className="bg-sky-50 px-4 py-2.5 rounded-full border border-sky-200 mr-2 flex-row items-center">
+                      <Text className="font-outfit-bold text-sky-600 text-[13px]">For Rent</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity className="bg-white px-4 py-2.5 rounded-full border border-slate-200 mr-2 flex-row items-center shadow-sm shadow-slate-100">
+                      <Text className="font-outfit-medium text-slate-600 text-[13px]">For Sale</Text>
+                    </TouchableOpacity>
+                    <View className="w-[1px] h-6 bg-slate-200 mx-1 mr-3 self-center" />
+                    <TouchableOpacity className="bg-white px-4 py-2.5 rounded-full border border-slate-200 mr-2 flex-row items-center shadow-sm shadow-slate-100">
+                      <Text className="font-outfit-medium text-slate-600 text-[13px]">Price: Any</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity className="bg-white px-4 py-2.5 rounded-full border border-slate-200 mr-2 flex-row items-center shadow-sm shadow-slate-100">
+                      <Text className="font-outfit-medium text-slate-600 text-[13px]">Newest First</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+
+                {/* Popular Near You header */}
+                <View className="px-5 flex-row items-center justify-between mt-2 mb-3">
+                  <Text className="font-outfit-bold text-lg text-slate-800">Popular Near You</Text>
+                  <TouchableOpacity>
+                    <Text className="font-outfit-medium text-sm text-slate-500">See All &gt;</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Text className="font-outfit-bold text-2xl text-slate-900 mb-2 text-center">Marketplace</Text>
-              <Text className="font-outfit text-sm text-slate-500 text-center leading-relaxed">
-                We are currently building this feature. Camaroo's gear market will be available soon!
-              </Text>
-            </View>
-          </ScrollView>
+            }
+            renderItem={({ item }) => (
+              <MarketplaceItemCard
+                id={item.id}
+                title={item.title}
+                price={item.price}
+                location={item.location}
+                thumbnail={item.thumbnail}
+                onPress={(id) => router.push(`/marketplace/${id}`)}
+              />
+            )}
+          />
         )}
       </SafeAreaView>
     </View>
